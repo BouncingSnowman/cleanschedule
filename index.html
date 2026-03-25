@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CleanSchedule — Schemaläggning för städföretag</title>
+    <meta name="description" content="Enkel och smidig schemaläggning för städföretag. Hantera anställda, kunder och jobb i en veckokalender.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Mobile Header (hidden on desktop) -->
+        <header id="mobile-header" class="mobile-header">
+            <button id="mobile-menu-btn" class="btn-icon" aria-label="Meny">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            </button>
+            <span class="mobile-title">CleanSchedule</span>
+        </header>
+
+        <!-- Sidebar -->
+        <nav id="sidebar">
+            <div class="sidebar-logo">
+                <span class="logo-icon">✨</span>
+                <span class="logo-text">CleanSchedule</span>
+            </div>
+            <ul class="sidebar-nav">
+                <li>
+                    <button class="nav-btn active" data-view="dashboard" id="nav-dashboard">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                        Översikt
+                    </button>
+                </li>
+                <li>
+                    <button class="nav-btn" data-view="schedule" id="nav-schedule">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                        Schema
+                    </button>
+                </li>
+                <li>
+                    <button class="nav-btn" data-view="employees" id="nav-employees">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        Anställda
+                    </button>
+                </li>
+                <li>
+                    <button class="nav-btn" data-view="customers" id="nav-customers">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                        Kunder
+                    </button>
+                </li>
+            </ul>
+            <div class="sidebar-actions">
+                <button id="btn-export" class="sidebar-action-btn" title="Exportera data">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Exportera
+                </button>
+                <button id="btn-import" class="sidebar-action-btn" title="Importera data">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    Importera
+                </button>
+                <button id="btn-print" class="sidebar-action-btn" title="Skriv ut schema">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                    Skriv ut
+                </button>
+            </div>
+            <input type="file" id="import-file-input" accept=".json" hidden>
+            <div class="sidebar-footer">
+                <div class="user-badge">
+                    <div class="user-avatar">👤</div>
+                    <span class="user-name">Admin</span>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main id="main-content">
+            <!-- Dashboard View -->
+            <section id="view-dashboard" class="view active">
+                <header class="view-header">
+                    <h1>Översikt</h1>
+                </header>
+                <div id="dashboard-content" class="dashboard-grid">
+                    <!-- Rendered by JS -->
+                </div>
+            </section>
+
+            <!-- Schedule View -->
+            <section id="view-schedule" class="view">
+                <header class="view-header">
+                    <div class="week-nav">
+                        <button id="btn-prev-week" class="btn-icon" title="Föregående vecka">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+                        </button>
+                        <h1 id="week-title" class="week-title">Vecka 13 — 24–30 mars 2026</h1>
+                        <button id="btn-next-week" class="btn-icon" title="Nästa vecka">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                        </button>
+                        <button id="btn-today" class="btn-secondary">Idag</button>
+                    </div>
+                    <button id="btn-add-job" class="btn-primary">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Nytt jobb
+                    </button>
+                </header>
+                <div class="schedule-layout">
+                    <div class="schedule-grid-wrapper">
+                        <div id="schedule-grid" class="schedule-grid">
+                            <!-- Rendered by JS -->
+                        </div>
+                    </div>
+                    <aside class="unscheduled-panel" id="unscheduled-panel">
+                        <div class="unscheduled-header">
+                            <h2>Oplanerade jobb <span class="unscheduled-badge" id="unscheduled-count">0</span></h2>
+                            <button class="btn-primary btn-sm" id="btn-add-unscheduled">+ Nytt</button>
+                        </div>
+                        <div class="unscheduled-search">
+                            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            <input type="text" id="unscheduled-search" class="search-input" placeholder="Sök kund eller adress...">
+                        </div>
+                        <div id="unscheduled-list" class="unscheduled-list">
+                            <!-- Rendered by JS -->
+                        </div>
+                    </aside>
+                </div>
+            </section>
+
+            <!-- Employees View -->
+            <section id="view-employees" class="view">
+                <header class="view-header">
+                    <h1>Anställda</h1>
+                    <button id="btn-add-employee" class="btn-primary">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Lägg till anställd
+                    </button>
+                </header>
+                <div id="employees-list" class="card-list">
+                    <!-- Rendered by JS -->
+                </div>
+            </section>
+
+            <!-- Customers View -->
+            <section id="view-customers" class="view">
+                <header class="view-header">
+                    <div class="header-left">
+                        <h1>Kunder</h1>
+                        <div class="search-box">
+                            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            <input type="text" id="customer-search" class="search-input" placeholder="Sök kund...">
+                        </div>
+                    </div>
+                    <button id="btn-add-customer" class="btn-primary">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Lägg till kund
+                    </button>
+                </header>
+                <div id="customers-list" class="card-list">
+                    <!-- Rendered by JS -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Mobile overlay -->
+    <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+    <!-- Modal -->
+    <div id="modal-overlay" class="modal-overlay hidden">
+        <div id="modal" class="modal">
+            <div class="modal-header">
+                <h2 id="modal-title"></h2>
+                <button id="modal-close" class="btn-icon modal-close-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div id="modal-body" class="modal-body">
+                <!-- Dynamic content -->
+            </div>
+            <div id="modal-footer" class="modal-footer">
+                <!-- Dynamic buttons -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast hidden">
+        <span id="toast-message"></span>
+    </div>
+
+    <script type="module" src="src/store.js"></script>
+    <script type="module" src="src/modals.js"></script>
+    <script type="module" src="src/employees.js"></script>
+    <script type="module" src="src/customers.js"></script>
+    <script type="module" src="src/calendar.js"></script>
+    <script type="module" src="src/dashboard.js"></script>
+    <script type="module" src="src/main.js"></script>
+</body>
+</html>
