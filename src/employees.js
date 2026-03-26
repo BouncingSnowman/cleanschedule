@@ -2,8 +2,8 @@
  * CleanSchedule — Employee Management UI
  */
 
-import { getEmployees, addEmployee, updateEmployee, deleteEmployee, EMPLOYEE_COLORS, getTimeOffForEmployee, addTimeOff, deleteTimeOff } from './store.js';
-import { openModal, closeModal } from './modals.js';
+import { getEmployees, addEmployee, updateEmployee, deleteEmployee, EMPLOYEE_COLORS, getTimeOffForEmployee, addTimeOff, deleteTimeOff } from './store.js?v=3';
+import { openModal, closeModal } from './modals.js?v=3';
 
 let onChangeCallback = null;
 
@@ -74,9 +74,9 @@ export function renderEmployees() {
     });
 
     container.querySelectorAll('.btn-delete-emp').forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async () => {
             if (confirm('Är du säker på att du vill ta bort denna anställd? Alla deras jobb tas också bort.')) {
-                deleteEmployee(btn.dataset.id);
+                await deleteEmployee(btn.dataset.id);
                 renderEmployees();
                 if (onChangeCallback) onChangeCallback();
             }
@@ -118,7 +118,7 @@ function showEmployeeForm(existing = null) {
                         <option value="contractor" ${existing?.type === 'contractor' ? 'selected' : ''}>Timanställd</option>
                     </select>
                 </div>
-                <div class="form-group">
+                <div class="form-group" id="emp-hours-group" style="${existing?.type === 'contractor' ? 'display:none' : ''}">
                     <label for="emp-hours">Tim/vecka</label>
                     <input type="number" id="emp-hours" class="form-input" placeholder="40" value="${existing?.defaultHours || ''}">
                 </div>
@@ -156,8 +156,19 @@ function showEmployeeForm(existing = null) {
         chosenColor = swatch.dataset.color;
     });
 
+    // Type change — show/hide hours field
+    document.getElementById('emp-type').addEventListener('change', (e) => {
+        const hoursGroup = document.getElementById('emp-hours-group');
+        if (e.target.value === 'contractor') {
+            hoursGroup.style.display = 'none';
+            document.getElementById('emp-hours').value = '';
+        } else {
+            hoursGroup.style.display = '';
+        }
+    });
+
     document.getElementById('modal-cancel').addEventListener('click', closeModal);
-    document.getElementById('modal-save').addEventListener('click', () => {
+    document.getElementById('modal-save').addEventListener('click', async () => {
         const name = document.getElementById('emp-name').value.trim();
         if (!name) {
             document.getElementById('emp-name').style.borderColor = 'var(--danger)';
@@ -167,21 +178,24 @@ function showEmployeeForm(existing = null) {
         const empData = {
             name,
             type: document.getElementById('emp-type').value,
-            defaultHours: document.getElementById('emp-hours').value || '',
+            defaultHours: document.getElementById('emp-type').value === 'contractor' ? '' : (document.getElementById('emp-hours').value || ''),
             phone: document.getElementById('emp-phone').value.trim(),
             email: document.getElementById('emp-email').value.trim(),
             color: chosenColor,
         };
 
-        if (isEdit) {
-            updateEmployee(existing.id, empData);
-        } else {
-            addEmployee(empData);
+        try {
+            if (isEdit) {
+                await updateEmployee(existing.id, empData);
+            } else {
+                await addEmployee(empData);
+            }
+            closeModal();
+            renderEmployees();
+            if (onChangeCallback) onChangeCallback();
+        } catch (err) {
+            alert('Kunde inte spara: ' + err.message);
         }
-
-        closeModal();
-        renderEmployees();
-        if (onChangeCallback) onChangeCallback();
     });
 }
 
@@ -230,14 +244,14 @@ function showTimeOffForm(emp) {
 
     // Remove entries
     document.querySelectorAll('.btn-rm-timeoff').forEach(btn => {
-        btn.addEventListener('click', () => {
-            deleteTimeOff(btn.dataset.id);
+        btn.addEventListener('click', async () => {
+            await deleteTimeOff(btn.dataset.id);
             showTimeOffForm(emp); // Re-open to refresh list
         });
     });
 
     document.getElementById('modal-cancel').addEventListener('click', closeModal);
-    document.getElementById('modal-save').addEventListener('click', () => {
+    document.getElementById('modal-save').addEventListener('click', async () => {
         const startDate = document.getElementById('to-start').value;
         const endDate = document.getElementById('to-end').value;
         const reason = document.getElementById('to-reason').value.trim();
@@ -248,7 +262,7 @@ function showTimeOffForm(emp) {
             return;
         }
 
-        addTimeOff({ employeeId: emp.id, startDate, endDate, reason });
+        await addTimeOff({ employeeId: emp.id, startDate, endDate, reason });
         showTimeOffForm(emp); // Re-open to refresh list
     });
 }

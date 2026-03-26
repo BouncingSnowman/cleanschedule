@@ -1,9 +1,10 @@
 /**
- * CleanSchedule — Data Store
- * Handles all data persistence via localStorage.
+ * CleanSchedule — Data Store (Supabase Backend)
+ * In-memory cache + Supabase sync for fast reads.
+ * All write operations persist to Supabase and update local cache.
  */
 
-const STORAGE_KEY = 'cleanschedule_data';
+import { dbSelect, dbInsert, dbUpdate, dbDelete, isLoggedIn } from './supabase.js?v=3';
 
 const EMPLOYEE_COLORS = [
     { id: 'coral',   color: '#f87171', bg: '#fef2f2' },
@@ -16,171 +17,175 @@ const EMPLOYEE_COLORS = [
     { id: 'orange',  color: '#fb923c', bg: '#fff7ed' },
 ];
 
-function getDefaultData() {
-    return {
-        employees: [],
-        customers: [],
-        jobs: [],
-        timeOff: [],
-    };
-}
+// --- In-memory cache ---
+let _cache = {
+    employees: [],
+    customers: [],
+    jobs: [],
+    timeOff: [],
+    loaded: false,
+};
 
-function loadData() {
+/** Load all data from Supabase into cache */
+export async function loadAllData() {
+    if (!isLoggedIn()) return;
     try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return getDefaultData();
-        const data = JSON.parse(raw);
-        // Ensure all arrays exist
-        return {
-            employees: data.employees || [],
-            customers: data.customers || [],
-            jobs: data.jobs || [],
-            timeOff: data.timeOff || [],
-        };
+        const [employees, customers, jobs, timeOff] = await Promise.all([
+            dbSelect('employees', 'order=created_at.asc'),
+            dbSelect('customers', 'order=created_at.asc'),
+            dbSelect('jobs', 'order=created_at.asc'),
+            dbSelect('time_off', 'order=created_at.asc'),
+        ]);
+        _cache.employees = mapFromDb(employees, 'employee');
+        _cache.customers = mapFromDb(customers, 'customer');
+        _cache.jobs = mapFromDb(jobs, 'job');
+        _cache.timeOff = mapFromDb(timeOff, 'timeOff');
+        _cache.loaded = true;
     } catch (e) {
         console.error('Failed to load data:', e);
-        return getDefaultData();
     }
 }
 
-function saveData(data) {
-    try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    } catch (e) {
-        console.error('Failed to save data:', e);
-    }
+// Map DB snake_case to JS camelCase
+function mapFromDb(rows, type) {
+    return rows.map(r => {
+        if (type === 'employee') return {
+            id: r.id, name: r.name, phone: r.phone, email: r.email,
+            type: r.type, color: r.color,
+            defaultHours: r.default_hours,
+        };
+        if (type === 'customer') return {
+            id: r.id, name: r.name, address: r.address,
+            phone: r.phone, email: r.email,
+            estimatedHours: r.estimated_hours, notes: r.notes,
+        };
+        if (type === 'job') return {
+            id: r.id, customerId: r.customer_id, employeeId: r.employee_id,
+            date: r.date, startTime: r.start_time, hours: r.hours,
+            recurring: r.recurring, notes: r.notes,
+        };
+        if (type === 'timeOff') return {
+            id: r.id, employeeId: r.employee_id,
+            startDate: r.start_date, endDate: r.end_date, reason: r.reason,
+        };
+        return r;
+    });
 }
 
-function generateId() {
-    return Date.now().toString(36) + Math.random().toString(36).substring(2, 7);
+// Map JS camelCase to DB snake_case
+function toDbEmployee(e) {
+    const r = {};
+    if (e.name !== undefined) r.name = e.name;
+    if (e.phone !== undefined) r.phone = e.phone;
+    if (e.email !== undefined) r.email = e.email;
+    if (e.type !== undefined) r.type = e.type;
+    if (e.color !== undefined) r.color = e.color;
+    if (e.defaultHours !== undefined) r.default_hours = e.defaultHours === '' ? null : e.defaultHours;
+    return r;
 }
 
-// --- Employees ---
+function toDbCustomer(c) {
+    const r = {};
+    if (c.name !== undefined) r.name = c.name;
+    if (c.address !== undefined) r.address = c.address;
+    if (c.phone !== undefined) r.phone = c.phone;
+    if (c.email !== undefined) r.email = c.email;
+    if (c.estimatedHours !== undefined) r.estimated_hours = c.estimatedHours === '' ? null : c.estimatedHours;
+    if (c.notes !== undefined) r.notes = c.notes;
+    return r;
+}
+
+function toDbJob(j) {
+    const r = {};
+    if (j.customerId !== undefined) r.customer_id = j.customerId;
+    if (j.employeeId !== undefined) r.employee_id = j.employeeId || null;
+    if (j.date !== undefined) r.date = j.date || null;
+    if (j.startTime !== undefined) r.start_time = j.startTime;
+    if (j.hours !== undefined) r.hours = j.hours;
+    if (j.recurring !== undefined) r.recurring = j.recurring;
+    if (j.notes !== undefined) r.notes = j.notes;
+    return r;
+}
+
+function toDbTimeOff(t) {
+    const r = {};
+    if (t.employeeId !== undefined) r.employee_id = t.employeeId;
+    if (t.startDate !== undefined) r.start_date = t.startDate;
+    if (t.endDate !== undefined) r.end_date = t.endDate;
+    if (t.reason !== undefined) r.reason = t.reason;
+    return r;
+}
+
+// --- Employees (sync reads from cache, async writes to Supabase) ---
 
 export function getEmployees() {
-    return loadData().employees;
+    return _cache.employees;
 }
 
 export function getEmployee(id) {
-    return loadData().employees.find(e => e.id === id);
+    return _cache.employees.find(e => e.id === id);
 }
 
-export function addEmployee(employee) {
-    const data = loadData();
-    employee.id = generateId();
-    data.employees.push(employee);
-    saveData(data);
-    return employee;
+export async function addEmployee(employee) {
+    const rows = await dbInsert('employees', toDbEmployee(employee));
+    const added = mapFromDb(rows, 'employee')[0];
+    _cache.employees.push(added);
+    return added;
 }
 
-export function updateEmployee(id, updates) {
-    const data = loadData();
-    const idx = data.employees.findIndex(e => e.id === id);
-    if (idx === -1) return null;
-    data.employees[idx] = { ...data.employees[idx], ...updates };
-    saveData(data);
-    return data.employees[idx];
+export async function updateEmployee(id, updates) {
+    const rows = await dbUpdate('employees', id, toDbEmployee(updates));
+    const updated = mapFromDb(rows, 'employee')[0];
+    const idx = _cache.employees.findIndex(e => e.id === id);
+    if (idx !== -1) _cache.employees[idx] = updated;
+    return updated;
 }
 
-export function deleteEmployee(id) {
-    const data = loadData();
-    data.employees = data.employees.filter(e => e.id !== id);
-    // Also remove their jobs
-    data.jobs = data.jobs.filter(j => j.employeeId !== id);
-    saveData(data);
+export async function deleteEmployee(id) {
+    await dbDelete('employees', id);
+    _cache.employees = _cache.employees.filter(e => e.id !== id);
+    _cache.jobs = _cache.jobs.filter(j => j.employeeId !== id);
+    _cache.timeOff = _cache.timeOff.filter(t => t.employeeId !== id);
 }
 
 // --- Customers ---
 
 export function getCustomers() {
-    return loadData().customers;
+    return _cache.customers;
 }
 
 export function getCustomer(id) {
-    return loadData().customers.find(c => c.id === id);
+    return _cache.customers.find(c => c.id === id);
 }
 
-export function addCustomer(customer) {
-    const data = loadData();
-    customer.id = generateId();
-    data.customers.push(customer);
-    saveData(data);
-    return customer;
+export async function addCustomer(customer) {
+    const rows = await dbInsert('customers', toDbCustomer(customer));
+    const added = mapFromDb(rows, 'customer')[0];
+    _cache.customers.push(added);
+    return added;
 }
 
-export function updateCustomer(id, updates) {
-    const data = loadData();
-    const idx = data.customers.findIndex(c => c.id === id);
-    if (idx === -1) return null;
-    data.customers[idx] = { ...data.customers[idx], ...updates };
-    saveData(data);
-    return data.customers[idx];
+export async function updateCustomer(id, updates) {
+    const rows = await dbUpdate('customers', id, toDbCustomer(updates));
+    const updated = mapFromDb(rows, 'customer')[0];
+    const idx = _cache.customers.findIndex(c => c.id === id);
+    if (idx !== -1) _cache.customers[idx] = updated;
+    return updated;
 }
 
-export function deleteCustomer(id) {
-    const data = loadData();
-    data.customers = data.customers.filter(c => c.id !== id);
-    // Also remove their jobs
-    data.jobs = data.jobs.filter(j => j.customerId !== id);
-    saveData(data);
+export async function deleteCustomer(id) {
+    await dbDelete('customers', id);
+    _cache.customers = _cache.customers.filter(c => c.id !== id);
+    _cache.jobs = _cache.jobs.filter(j => j.customerId !== id);
 }
 
 // --- Jobs ---
 
 export function getJobs() {
-    return loadData().jobs;
-}
-
-export function getJobsForWeek(weekStart) {
-    const data = loadData();
-    const start = new Date(weekStart);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(start);
-    end.setDate(end.getDate() + 6);
-    end.setHours(23, 59, 59, 999);
-
-    return data.jobs.filter(job => {
-        // Direct match - job falls in this week
-        const jobDate = new Date(job.date);
-        if (jobDate >= start && jobDate <= end) return true;
-
-        // Recurring job - check if it occurs this week
-        if (job.recurring && job.recurring !== 'none') {
-            return doesRecurringJobFallInWeek(job, start, end);
-        }
-
-        return false;
-    });
-}
-
-function doesRecurringJobFallInWeek(job, weekStart, weekEnd) {
-    const jobDate = new Date(job.date);
-    const dayOfWeek = jobDate.getDay(); // 0=Sun, 1=Mon, ...
-
-    // Find the date in this week that matches the same day of week
-    for (let d = new Date(weekStart); d <= weekEnd; d.setDate(d.getDate() + 1)) {
-        if (d.getDay() === dayOfWeek) {
-            const targetDate = new Date(d);
-            if (targetDate <= jobDate) continue; // Only future occurrences
-
-            if (job.recurring === 'weekly') return true;
-
-            if (job.recurring === 'biweekly') {
-                const diffTime = targetDate - jobDate;
-                const diffWeeks = Math.round(diffTime / (7 * 24 * 60 * 60 * 1000));
-                if (diffWeeks % 2 === 0) return true;
-            }
-
-            if (job.recurring === 'monthly') {
-                if (targetDate.getDate() === jobDate.getDate()) return true;
-            }
-        }
-    }
-    return false;
+    return _cache.jobs;
 }
 
 export function getJobOccurrencesForWeek(weekStart) {
-    const data = loadData();
     const start = new Date(weekStart);
     start.setHours(0, 0, 0, 0);
     const end = new Date(start);
@@ -189,7 +194,9 @@ export function getJobOccurrencesForWeek(weekStart) {
 
     const occurrences = [];
 
-    for (const job of data.jobs) {
+    for (const job of _cache.jobs) {
+        if (!job.date || !job.employeeId) continue; // skip unscheduled
+
         const jobDate = new Date(job.date);
 
         // Direct match
@@ -228,62 +235,54 @@ export function getJobOccurrencesForWeek(weekStart) {
 }
 
 export function getUnscheduledJobs() {
-    const data = loadData();
-    return data.jobs.filter(j => !j.employeeId || !j.date);
+    return _cache.jobs.filter(j => !j.employeeId || !j.date);
 }
 
-export function addJob(job) {
-    const data = loadData();
-    job.id = generateId();
-    data.jobs.push(job);
-    saveData(data);
-    return job;
+export async function addJob(job) {
+    const rows = await dbInsert('jobs', toDbJob(job));
+    const added = mapFromDb(rows, 'job')[0];
+    _cache.jobs.push(added);
+    return added;
 }
 
-export function updateJob(id, updates) {
-    const data = loadData();
-    const idx = data.jobs.findIndex(j => j.id === id);
-    if (idx === -1) return null;
-    data.jobs[idx] = { ...data.jobs[idx], ...updates };
-    saveData(data);
-    return data.jobs[idx];
+export async function updateJob(id, updates) {
+    const rows = await dbUpdate('jobs', id, toDbJob(updates));
+    const updated = mapFromDb(rows, 'job')[0];
+    const idx = _cache.jobs.findIndex(j => j.id === id);
+    if (idx !== -1) _cache.jobs[idx] = updated;
+    return updated;
 }
 
-export function deleteJob(id) {
-    const data = loadData();
-    data.jobs = data.jobs.filter(j => j.id !== id);
-    saveData(data);
+export async function deleteJob(id) {
+    await dbDelete('jobs', id);
+    _cache.jobs = _cache.jobs.filter(j => j.id !== id);
 }
 
 // --- Time Off ---
 
 export function getTimeOff() {
-    return loadData().timeOff || [];
+    return _cache.timeOff;
 }
 
 export function getTimeOffForEmployee(employeeId) {
-    return (loadData().timeOff || []).filter(t => t.employeeId === employeeId);
+    return _cache.timeOff.filter(t => t.employeeId === employeeId);
 }
 
-export function addTimeOff(entry) {
-    const data = loadData();
-    if (!data.timeOff) data.timeOff = [];
-    entry.id = generateId();
-    data.timeOff.push(entry);
-    saveData(data);
-    return entry;
+export async function addTimeOff(entry) {
+    const rows = await dbInsert('time_off', toDbTimeOff(entry));
+    const added = mapFromDb(rows, 'timeOff')[0];
+    _cache.timeOff.push(added);
+    return added;
 }
 
-export function deleteTimeOff(id) {
-    const data = loadData();
-    data.timeOff = (data.timeOff || []).filter(t => t.id !== id);
-    saveData(data);
+export async function deleteTimeOff(id) {
+    await dbDelete('time_off', id);
+    _cache.timeOff = _cache.timeOff.filter(t => t.id !== id);
 }
 
 export function isEmployeeOffOnDate(employeeId, dateStr) {
-    const timeOff = loadData().timeOff || [];
     const d = new Date(dateStr);
-    return timeOff.some(t => {
+    return _cache.timeOff.some(t => {
         if (t.employeeId !== employeeId) return false;
         const start = new Date(t.startDate);
         const end = new Date(t.endDate);
@@ -294,7 +293,12 @@ export function isEmployeeOffOnDate(employeeId, dateStr) {
 // --- Export/Import ---
 
 export function exportData() {
-    const data = loadData();
+    const data = {
+        employees: _cache.employees,
+        customers: _cache.customers,
+        jobs: _cache.jobs,
+        timeOff: _cache.timeOff,
+    };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -304,24 +308,138 @@ export function exportData() {
     URL.revokeObjectURL(url);
 }
 
-export function importData(file) {
+export async function importData(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             try {
                 const data = JSON.parse(e.target.result);
                 if (!data.employees || !data.customers || !data.jobs) {
                     reject(new Error('Ogiltig fil'));
                     return;
                 }
-                saveData(data);
+
+                // Clear existing data first to avoid duplicates
+                for (const t of _cache.timeOff) await dbDelete('time_off', t.id);
+                for (const j of _cache.jobs) await dbDelete('jobs', j.id);
+                for (const c of _cache.customers) await dbDelete('customers', c.id);
+                for (const emp of _cache.employees) await dbDelete('employees', emp.id);
+                _cache = { employees: [], customers: [], jobs: [], timeOff: [], loaded: true };
+
+                // Import with ID mapping (old ID → new ID)
+                const empIdMap = {};
+                const custIdMap = {};
+
+                for (const emp of data.employees) {
+                    const oldId = emp.id;
+                    const added = await addEmployee(emp);
+                    empIdMap[oldId] = added.id;
+                }
+                for (const cust of data.customers) {
+                    const oldId = cust.id;
+                    const added = await addCustomer(cust);
+                    custIdMap[oldId] = added.id;
+                }
+                for (const job of data.jobs) {
+                    const mapped = { ...job };
+                    if (mapped.employeeId) mapped.employeeId = empIdMap[mapped.employeeId] || mapped.employeeId;
+                    if (mapped.customerId) mapped.customerId = custIdMap[mapped.customerId] || mapped.customerId;
+                    delete mapped.id;
+                    await addJob(mapped);
+                }
+                for (const to of (data.timeOff || [])) {
+                    const mapped = { ...to };
+                    if (mapped.employeeId) mapped.employeeId = empIdMap[mapped.employeeId] || mapped.employeeId;
+                    delete mapped.id;
+                    await addTimeOff(mapped);
+                }
                 resolve(data);
             } catch (err) {
-                reject(new Error('Kunde inte läsa filen'));
+                reject(new Error('Kunde inte importera: ' + err.message));
             }
         };
         reader.onerror = () => reject(new Error('Filläsningsfel'));
         reader.readAsText(file);
+    });
+}
+// --- Spiris Online CSV Import ---
+
+export async function importCustomersFromCsv(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const text = e.target.result;
+                const lines = text.split(/\r?\n/).filter(l => l.trim());
+                if (lines.length < 2) { reject(new Error('Tom CSV-fil')); return; }
+
+                // Parse header
+                const headers = lines[0].split(';');
+                const col = (name) => headers.indexOf(name);
+
+                const nameIdx = col('Name');
+                const activeIdx = col('IsActive');
+                const addr1Idx = col('InvoiceAddress1');
+                const addr2Idx = col('InvoiceAddress2');
+                const postalIdx = col('InvoicePostalCode');
+                const cityIdx = col('InvoiceCity');
+                const phoneIdx = col('Telephone');
+                const mobileIdx = col('MobilePhone');
+                const emailIdx = col('EmailAddress');
+                const noteIdx = col('Note');
+
+                if (nameIdx === -1) { reject(new Error('Kolumnen "Name" saknas i CSV')); return; }
+
+                // Parse rows
+                const customers = [];
+                const seenNames = new Set();
+
+                for (let i = 1; i < lines.length; i++) {
+                    const fields = lines[i].split(';');
+                    
+                    // Skip inactive
+                    if (activeIdx !== -1 && fields[activeIdx]?.trim().toLowerCase() === 'false') continue;
+
+                    const name = fields[nameIdx]?.trim();
+                    if (!name) continue;
+
+                    // Deduplicate by name
+                    if (seenNames.has(name.toLowerCase())) continue;
+                    seenNames.add(name.toLowerCase());
+
+                    // Build address
+                    const parts = [
+                        fields[addr1Idx]?.trim(),
+                        fields[addr2Idx]?.trim(),
+                        [fields[postalIdx]?.trim(), fields[cityIdx]?.trim()].filter(Boolean).join(' ')
+                    ].filter(Boolean);
+
+                    const phone = fields[mobileIdx]?.trim() || fields[phoneIdx]?.trim() || '';
+
+                    customers.push({
+                        name,
+                        address: parts.join(', ') || '',
+                        phone,
+                        email: fields[emailIdx]?.trim() || '',
+                        notes: fields[noteIdx]?.trim() || '',
+                        estimatedHours: '',
+                    });
+                }
+
+                // Insert into Supabase
+                let count = 0;
+                for (const cust of customers) {
+                    await addCustomer(cust);
+                    count++;
+                }
+
+                resolve(count);
+            } catch (err) {
+                reject(new Error('CSV-import misslyckades: ' + err.message));
+            }
+        };
+        reader.onerror = () => reject(new Error('Filläsningsfel'));
+        reader.readAsText(file, 'utf-8');
     });
 }
 

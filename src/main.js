@@ -4,11 +4,11 @@
 
 import { restoreSession, isLoggedIn, signOut, handleOAuthCallback, getUser } from './supabase.js?v=3';
 import { initAuth, renderAuthView } from './auth.js?v=3';
-import { loadAllData } from './store.js?v=3';
+import { loadAllData, getUnscheduledJobs } from './store.js?v=3';
 import { initCalendar, renderCalendar, renderUnscheduledPanel } from './calendar.js?v=3';
 import { initEmployees, renderEmployees } from './employees.js?v=3';
 import { initCustomers, renderCustomers } from './customers.js?v=3';
-import { initDashboard, renderDashboard } from './dashboard.js?v=5';
+import { initDashboard, renderDashboard } from './dashboard.js?v=7';
 import { exportData, importData, importCustomersFromCsv } from './store.js?v=3';
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -57,6 +57,21 @@ async function onLoginSuccess() {
     const navBtns = document.querySelectorAll('.nav-btn');
     const views = document.querySelectorAll('.view:not(#view-auth)');
 
+    // Update sidebar unscheduled nav item visibility
+    function updateUnscheduledNav() {
+        const jobs = getUnscheduledJobs();
+        const item = document.getElementById('nav-unscheduled-item');
+        const badge = document.getElementById('nav-unscheduled-badge');
+        if (item && badge) {
+            if (jobs.length > 0) {
+                item.classList.remove('hidden');
+                badge.textContent = jobs.length;
+            } else {
+                item.classList.add('hidden');
+            }
+        }
+    }
+
     window._switchView = function switchView(viewId) {
         navBtns.forEach(b => b.classList.remove('active'));
         views.forEach(v => v.classList.remove('active'));
@@ -72,6 +87,7 @@ async function onLoginSuccess() {
             case 'employees': renderEmployees(); break;
             case 'customers': renderCustomers(); break;
         }
+        updateUnscheduledNav();
         closeMobileMenu();
     };
 
@@ -230,6 +246,7 @@ async function onLoginSuccess() {
 
     // Start on dashboard
     renderDashboard();
+    updateUnscheduledNav();
 }
 
 function showAuthView() {

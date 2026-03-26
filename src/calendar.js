@@ -6,8 +6,8 @@ import {
     getEmployees, getCustomers, getEmployee, getCustomer,
     getJobOccurrencesForWeek, getUnscheduledJobs, addJob, updateJob, deleteJob,
     EMPLOYEE_COLORS, isEmployeeOffOnDate
-} from './store.js';
-import { openModal, closeModal } from './modals.js';
+} from './store.js?v=3';
+import { openModal, closeModal } from './modals.js?v=3';
 
 const DAYS_SV = ['Måndag', 'Tisdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lördag'];
 const MONTHS_SV = ['januari', 'februari', 'mars', 'april', 'maj', 'juni',
@@ -39,6 +39,15 @@ export function initCalendar() {
 
     document.getElementById('btn-add-unscheduled').addEventListener('click', () => {
         showUnscheduledForm();
+    });
+
+    document.getElementById('btn-fullscreen').addEventListener('click', () => {
+        const isFS = document.body.classList.toggle('fullscreen-calendar');
+        const btn = document.getElementById('btn-fullscreen');
+        btn.innerHTML = isFS
+            ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 14h6v6m10-10h-6V4M4 10h6V4m10 10h-6v6"/></svg>'
+            : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>';
+        btn.title = isFS ? 'Avsluta helskärm' : 'Helskärm';
     });
 
     document.getElementById('unscheduled-search').addEventListener('input', (e) => {
@@ -189,7 +198,7 @@ export function renderCalendar() {
         if (cell) cell.classList.add('drag-over');
     }
 
-    function onDragEnd(e) {
+    async function onDragEnd(e) {
         if (!dragState) return;
         document.removeEventListener('mousemove', onDragMove);
         document.removeEventListener('mouseup', onDragEnd);
@@ -207,7 +216,7 @@ export function renderCalendar() {
             const newEmployeeId = cell.dataset.employee;
             const newDate = cell.dataset.date;
             if (newEmployeeId && newDate) {
-                updateJob(dragState.jobId, { employeeId: newEmployeeId, date: newDate });
+                await updateJob(dragState.jobId, { employeeId: newEmployeeId, date: newDate });
                 renderCalendar();
             }
         }
@@ -359,16 +368,16 @@ function showJobForm(existing = null, prefillEmployee = '', prefillDate = '') {
     document.getElementById('modal-cancel').addEventListener('click', closeModal);
 
     if (isEdit) {
-        document.getElementById('modal-delete').addEventListener('click', () => {
+        document.getElementById('modal-delete').addEventListener('click', async () => {
             if (confirm('Är du säker på att du vill ta bort detta jobb?')) {
-                deleteJob(existing.id);
+                await deleteJob(existing.id);
                 closeModal();
                 renderCalendar();
             }
         });
     }
 
-    document.getElementById('modal-save').addEventListener('click', () => {
+    document.getElementById('modal-save').addEventListener('click', async () => {
         const jobData = {
             employeeId: document.getElementById('job-employee').value,
             customerId: document.getElementById('job-customer').value,
@@ -385,9 +394,9 @@ function showJobForm(existing = null, prefillEmployee = '', prefillDate = '') {
         }
 
         if (isEdit) {
-            updateJob(existing.id, jobData);
+            await updateJob(existing.id, jobData);
         } else {
-            addJob(jobData);
+            await addJob(jobData);
         }
 
         closeModal();
@@ -406,6 +415,13 @@ export function renderUnscheduledPanel(filter = '') {
 
     badge.textContent = jobs.length;
     badge.dataset.count = jobs.length;
+
+    // Highlight toggle arrow green when there are unscheduled jobs
+    const toggleBtn = document.getElementById('btn-toggle-panel');
+    if (toggleBtn) {
+        toggleBtn.style.color = jobs.length > 0 ? 'var(--success)' : '';
+        toggleBtn.style.borderColor = jobs.length > 0 ? 'var(--success)' : '';
+    }
 
     if (filter) {
         const q = filter.toLowerCase();
@@ -460,8 +476,19 @@ export function renderUnscheduledPanel(filter = '') {
                         </span>` : ''}
                     </div>
                 </div>
+                <button class="unsched-delete-btn" data-delete-id="${job.id}" title="Ta bort">🗑</button>
             </div>`;
     }).join('');
+
+    // Bind delete buttons
+    container.querySelectorAll('.unsched-delete-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (!confirm('Ta bort detta oplanerade jobb?')) return;
+            await deleteJob(btn.dataset.deleteId);
+            renderUnscheduledPanel();
+        });
+    });
 
     // Bind drag from panel to calendar
     const grid = document.getElementById('schedule-grid');
@@ -469,13 +496,16 @@ export function renderUnscheduledPanel(filter = '') {
     container.querySelectorAll('.unscheduled-card').forEach(card => {
         card.addEventListener('mousedown', (e) => {
             if (e.button !== 0) return;
+            if (e.target.closest('.unsched-delete-btn')) return;
             const startX = e.clientX;
             const startY = e.clientY;
+            let dragged = false;
 
             function onFirstMove(me) {
                 const dx = me.clientX - startX;
                 const dy = me.clientY - startY;
                 if (Math.abs(dx) + Math.abs(dy) > 5) {
+                    dragged = true;
                     document.removeEventListener('mousemove', onFirstMove);
                     document.removeEventListener('mouseup', onFirstUp);
                     startPanelDrag(me, card, grid);
@@ -485,6 +515,9 @@ export function renderUnscheduledPanel(filter = '') {
             function onFirstUp() {
                 document.removeEventListener('mousemove', onFirstMove);
                 document.removeEventListener('mouseup', onFirstUp);
+                if (!dragged) {
+                    showEditUnscheduledForm(card.dataset.jobId);
+                }
             }
 
             document.addEventListener('mousemove', onFirstMove);
@@ -517,7 +550,7 @@ function startPanelDrag(e, card, grid) {
         if (cell) cell.classList.add('drag-over');
     }
 
-    function onUp(me) {
+    async function onUp(me) {
         document.removeEventListener('mousemove', onMove);
         document.removeEventListener('mouseup', onUp);
 
@@ -532,7 +565,7 @@ function startPanelDrag(e, card, grid) {
             const newEmployeeId = cell.dataset.employee;
             const newDate = cell.dataset.date;
             if (newEmployeeId && newDate) {
-                updateJob(jobId, { employeeId: newEmployeeId, date: newDate });
+                await updateJob(jobId, { employeeId: newEmployeeId, date: newDate });
                 renderCalendar();
                 renderUnscheduledPanel();
             }
@@ -567,16 +600,10 @@ function showUnscheduledForm() {
                 <label for="unsched-customer">Kund *</label>
                 <select id="unsched-customer" class="form-input">${custOptions}</select>
             </div>
-            <div class="form-row">
-                <div class="form-group">
+            <div class="form-group">
                     <label for="unsched-hours">Antal timmar</label>
                     <input type="number" id="unsched-hours" class="form-input" placeholder="3" step="0.5" min="0.5">
                 </div>
-                <div class="form-group">
-                    <label for="unsched-start">Starttid</label>
-                    <input type="time" id="unsched-start" class="form-input" value="08:00">
-                </div>
-            </div>
             <div class="form-group">
                 <label for="unsched-notes">Anteckningar</label>
                 <textarea id="unsched-notes" class="form-input" placeholder="Särskilda instruktioner..."></textarea>
@@ -600,18 +627,71 @@ function showUnscheduledForm() {
     if (firstCust?.estimatedHours) hoursInput.value = firstCust.estimatedHours;
 
     document.getElementById('modal-cancel').addEventListener('click', closeModal);
-    document.getElementById('modal-save').addEventListener('click', () => {
+    document.getElementById('modal-save').addEventListener('click', async () => {
         const jobData = {
             customerId: custSelect.value,
             hours: hoursInput.value,
-            startTime: document.getElementById('unsched-start').value,
+            startTime: '',
             notes: document.getElementById('unsched-notes').value.trim(),
             employeeId: '',  // Unassigned!
             date: '',        // Unscheduled!
             recurring: 'none',
         };
 
-        addJob(jobData);
+        await addJob(jobData);
+        closeModal();
+        renderUnscheduledPanel();
+    });
+}
+
+function showEditUnscheduledForm(jobId) {
+    const customers = getCustomers();
+    const jobs = getUnscheduledJobs();
+    const job = jobs.find(j => j.id === jobId);
+    if (!job) return;
+
+    const custOptions = customers.map(c =>
+        `<option value="${c.id}" ${c.id === job.customerId ? 'selected' : ''}>${escHtml(c.name)}</option>`
+    ).join('');
+
+    openModal({
+        title: 'Redigera oplanerat jobb',
+        body: `
+            <div class="form-group">
+                <label for="edit-unsched-customer">Kund *</label>
+                <select id="edit-unsched-customer" class="form-input">${custOptions}</select>
+            </div>
+            <div class="form-group">
+                <label for="edit-unsched-hours">Antal timmar</label>
+                <input type="number" id="edit-unsched-hours" class="form-input" value="${job.hours || ''}" step="0.5" min="0.5">
+            </div>
+            <div class="form-group">
+                <label for="edit-unsched-notes">Anteckningar</label>
+                <textarea id="edit-unsched-notes" class="form-input">${escHtml(job.notes || '')}</textarea>
+            </div>
+        `,
+        footer: `
+            <button class="btn-danger" id="modal-delete">Ta bort</button>
+            <button class="btn-ghost" id="modal-cancel">Avbryt</button>
+            <button class="btn-primary" id="modal-save">Spara</button>
+        `,
+    });
+
+    document.getElementById('modal-cancel').addEventListener('click', closeModal);
+
+    document.getElementById('modal-delete').addEventListener('click', async () => {
+        if (!confirm('Ta bort detta oplanerade jobb?')) return;
+        await deleteJob(jobId);
+        closeModal();
+        renderUnscheduledPanel();
+    });
+
+    document.getElementById('modal-save').addEventListener('click', async () => {
+        await updateJob(jobId, {
+            customerId: document.getElementById('edit-unsched-customer').value,
+            hours: document.getElementById('edit-unsched-hours').value,
+            notes: document.getElementById('edit-unsched-notes').value.trim(),
+        });
         closeModal();
         renderUnscheduledPanel();
     });

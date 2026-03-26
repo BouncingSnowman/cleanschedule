@@ -1190,6 +1190,14 @@ select.form-input {
     flex: 1;
 }
 
+/* Dashboard date heading */
+.dashboard-date {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+}
+
 .stats-row {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -1216,6 +1224,22 @@ select.form-input {
 
 .stat-card.clickable {
     cursor: pointer;
+}
+
+/* Sidebar unscheduled badge */
+.unscheduled-nav-badge {
+    background: var(--danger);
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 700;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    border-radius: 100px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
 }
 
 .stat-icon {

@@ -2,8 +2,8 @@
  * CleanSchedule — Customer Management UI
  */
 
-import { getCustomers, addCustomer, updateCustomer, deleteCustomer } from './store.js';
-import { openModal, closeModal } from './modals.js';
+import { getCustomers, addCustomer, updateCustomer, deleteCustomer } from './store.js?v=3';
+import { openModal, closeModal } from './modals.js?v=3';
 
 let onChangeCallback = null;
 
@@ -80,9 +80,9 @@ export function renderCustomers(filter = '') {
     });
 
     container.querySelectorAll('.btn-delete-cust').forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async () => {
             if (confirm('Är du säker på att du vill ta bort denna kund? Alla deras jobb tas också bort.')) {
-                deleteCustomer(btn.dataset.id);
+                await deleteCustomer(btn.dataset.id);
                 renderCustomers();
                 if (onChangeCallback) onChangeCallback();
             }
@@ -130,7 +130,7 @@ function showCustomerForm(existing = null) {
     });
 
     document.getElementById('modal-cancel').addEventListener('click', closeModal);
-    document.getElementById('modal-save').addEventListener('click', () => {
+    document.getElementById('modal-save').addEventListener('click', async () => {
         const name = document.getElementById('cust-name').value.trim();
         if (!name) {
             document.getElementById('cust-name').style.borderColor = 'var(--danger)';
@@ -146,15 +146,18 @@ function showCustomerForm(existing = null) {
             estimatedHours: document.getElementById('cust-est-hours').value || '',
         };
 
-        if (isEdit) {
-            updateCustomer(existing.id, custData);
-        } else {
-            addCustomer(custData);
+        try {
+            if (isEdit) {
+                await updateCustomer(existing.id, custData);
+            } else {
+                await addCustomer(custData);
+            }
+            closeModal();
+            renderCustomers();
+            if (onChangeCallback) onChangeCallback();
+        } catch (err) {
+            alert('Kunde inte spara: ' + err.message);
         }
-
-        closeModal();
-        renderCustomers();
-        if (onChangeCallback) onChangeCallback();
     });
 }
 

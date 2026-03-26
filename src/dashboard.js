@@ -78,7 +78,13 @@ export function renderDashboard() {
     const avgHours = totalJobsThisWeek > 0 ? (totalHoursThisWeek / totalJobsThisWeek).toFixed(1) : '0';
 
     // --- BUILD HTML ---
+    const todayFormatted = formatSwedishDate(now);
+    const todayCapitalized = todayFormatted.charAt(0).toUpperCase() + todayFormatted.slice(1);
+
     container.innerHTML = `
+        <!-- Today's date -->
+        <div class="dashboard-date">${todayCapitalized}</div>
+
         <!-- Stats Cards -->
         <div class="stats-row">
             <div class="stat-card clickable" data-navigate="schedule">
