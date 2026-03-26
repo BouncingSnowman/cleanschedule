@@ -5,7 +5,7 @@
 import {
     getEmployees, getCustomers, getJobs, getUnscheduledJobs,
     getJobOccurrencesForWeek, EMPLOYEE_COLORS
-} from './store.js?v=13';
+} from './store.js?v=14';
 
 export function initDashboard() {
     // Dashboard re-renders when navigated to
@@ -140,21 +140,25 @@ export function renderDashboard() {
             <div class="dash-panel">
                 <h2 class="dash-panel-title">Beläggning per anställd</h2>
                 ${empStats.length === 0 ? '<p class="text-muted">Inga anställda tillagda ännu.</p>' :
-                empStats.map(e => `
+                empStats.map(e => {
+                    const isOver = e.hasTarget && e.hoursBooked > e.target;
+                    const barColor = isOver ? '#ef4444' : e.colorObj.color;
+                    const hoursStyle = isOver ? 'color:#ef4444;font-weight:600' : '';
+                    return `
                     <div class="utilization-row">
                         <div class="util-info">
                             <span class="emp-color-dot" style="background: ${e.colorObj.color}"></span>
                             <span class="util-name">${escHtml(e.name)}</span>
-                            <span class="util-hours">${e.hoursBooked}h${e.hasTarget ? ` / ${e.target}h` : ''}</span>
+                            <span class="util-hours" style="${hoursStyle}">${e.hoursBooked}h${e.hasTarget ? ` / ${e.target}h` : ''}</span>
                         </div>
                         ${e.hasTarget ? `
                         <div class="util-bar-bg">
-                            <div class="util-bar-fill" style="width: ${e.pct}%; background: ${e.colorObj.color}"></div>
+                            <div class="util-bar-fill" style="width: ${Math.min(e.pct, 100)}%; background: ${barColor}"></div>
                         </div>
-                        <span class="util-pct">${e.pct}%</span>
+                        <span class="util-pct" style="${isOver ? 'color:#ef4444;font-weight:600' : ''}">${e.pct}%</span>
                         ` : ''}
                     </div>
-                `).join('')}
+                `;}).join('')}
             </div>
 
             <!-- Today's Schedule -->

@@ -2,10 +2,10 @@
  * Veckoplan — Settings (Notification Preferences)
  */
 
-import { getUser } from './supabase.js?v=13';
+import { getUser } from './supabase.js?v=14';
 import {
     dbGetSubscription, dbUpsertSubscription, dbUpdateSubscriptionPrefs
-} from './supabase.js?v=13';
+} from './supabase.js?v=14';
 
 const VAPID_PUBLIC_KEY = 'BJC_-JfmMRGUnnkfibR52IGARups1q-t-jOGLee8FoA8G_oHH-v9QNf3PrqGrmz_gVWCLAzwSZN8A1gd72q4E_c';
 
