@@ -4,7 +4,7 @@
  * All write operations persist to Supabase and update local cache.
  */
 
-import { dbSelect, dbInsert, dbUpdate, dbDelete, isLoggedIn } from './supabase.js?v=15';
+import { dbSelect, dbInsert, dbUpdate, dbDelete, isLoggedIn } from './supabase.js?v=16';
 
 const SUPABASE_URL = 'https://cywcnyimlhiwbbqqzvoe.supabase.co';
 
@@ -67,7 +67,7 @@ function mapFromDb(rows, type) {
         if (type === 'employee') return {
             id: r.id, name: r.name, phone: r.phone, email: r.email,
             type: r.type, color: r.color,
-            defaultHours: r.default_hours,
+            defaultHours: r.default_hours, notes: r.notes,
         };
         if (type === 'customer') return {
             id: r.id, name: r.name, address: r.address,
@@ -96,6 +96,7 @@ function toDbEmployee(e) {
     if (e.type !== undefined) r.type = e.type;
     if (e.color !== undefined) r.color = e.color;
     if (e.defaultHours !== undefined) r.default_hours = e.defaultHours === '' ? null : e.defaultHours;
+    if (e.notes !== undefined) r.notes = e.notes;
     return r;
 }
 

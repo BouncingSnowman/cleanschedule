@@ -2,8 +2,8 @@
  * CleanSchedule — Employee Management UI
  */
 
-import { getEmployees, addEmployee, updateEmployee, deleteEmployee, EMPLOYEE_COLORS, getTimeOffForEmployee, addTimeOff, deleteTimeOff } from './store.js?v=15';
-import { openModal, closeModal } from './modals.js?v=15';
+import { getEmployees, addEmployee, updateEmployee, deleteEmployee, EMPLOYEE_COLORS, getTimeOffForEmployee, addTimeOff, deleteTimeOff } from './store.js?v=16';
+import { openModal, closeModal } from './modals.js?v=16';
 
 let onChangeCallback = null;
 
@@ -55,6 +55,11 @@ export function renderEmployees() {
                 <div class="card-detail">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                     ${escHtml(emp.defaultHours)} tim/vecka
+                </div>` : ''}
+                ${emp.notes ? `
+                <div class="card-detail" style="font-style:italic;color:var(--text-secondary)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                    <em>${escHtml(emp.notes)}</em>
                 </div>` : ''}
                 <div class="card-actions">
                     <button class="btn-ghost btn-edit-emp" data-id="${emp.id}">Redigera</button>
@@ -134,6 +139,10 @@ function showEmployeeForm(existing = null) {
                 </div>
             </div>
             <div class="form-group">
+                <label for="emp-notes">Anteckningar</label>
+                <textarea id="emp-notes" class="form-input" placeholder="T.ex. körkort, allergier, tillgänglighet...">${existing?.notes || ''}</textarea>
+            </div>
+            <div class="form-group">
                 <label>Färg</label>
                 <div class="color-picker" id="color-picker">
                     ${colorSwatches}
@@ -182,6 +191,7 @@ function showEmployeeForm(existing = null) {
             phone: document.getElementById('emp-phone').value.trim(),
             email: document.getElementById('emp-email').value.trim(),
             color: chosenColor,
+            notes: document.getElementById('emp-notes').value.trim(),
         };
 
         try {
