@@ -2,8 +2,8 @@
  * CleanSchedule — Customer Management UI
  */
 
-import { getCustomers, addCustomer, updateCustomer, deleteCustomer } from './store.js?v=16';
-import { openModal, closeModal } from './modals.js?v=16';
+import { getCustomers, addCustomer, updateCustomer, deleteCustomer, getJobs, getEmployees, EMPLOYEE_COLORS } from './store.js?v=17';
+import { openModal, closeModal } from './modals.js?v=17';
 
 let onChangeCallback = null;
 
@@ -39,7 +39,29 @@ export function renderCustomers(filter = '') {
         return;
     }
 
-    container.innerHTML = customers.map(cust => `
+    container.innerHTML = customers.map(cust => {
+        const custJobs = getJobs().filter(j => j.customerId === cust.id);
+        const employees = getEmployees();
+        const jobsHtml = custJobs.length > 0 ? `
+            <div class="card-jobs">
+                <div class="card-jobs-title">📋 Planerade jobb (${custJobs.length})</div>
+                ${custJobs.map(j => {
+                    const emp = employees.find(e => e.id === j.employeeId);
+                    const colorObj = emp ? (EMPLOYEE_COLORS.find(c => c.id === emp.color) || EMPLOYEE_COLORS[0]) : null;
+                    const empName = emp ? escHtml(emp.name) : '<span style="color:var(--text-muted)">Ej tilldelad</span>';
+                    const schedule = j.recurring
+                        ? `🔄 Återkommande · ${j.hours || '?'}h`
+                        : `${j.date || '?'} · ${j.hours || '?'}h`;
+                    return `
+                        <div class="card-job-item">
+                            ${colorObj ? `<span class="emp-color-dot" style="background:${colorObj.color};width:8px;height:8px"></span>` : ''}
+                            <span class="card-job-emp">${empName}</span>
+                            <span class="card-job-schedule">${schedule}</span>
+                        </div>`;
+                }).join('')}
+            </div>` : '';
+
+        return `
         <div class="card" data-id="${cust.id}">
             <div class="card-header">
                 <div class="card-title">${escHtml(cust.name)}</div>
@@ -64,12 +86,13 @@ export function renderCustomers(filter = '') {
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
                 <em>${escHtml(cust.notes)}</em>
             </div>` : ''}
+            ${jobsHtml}
             <div class="card-actions">
                 <button class="btn-ghost btn-edit-cust" data-id="${cust.id}">Redigera</button>
                 <button class="btn-danger btn-delete-cust" data-id="${cust.id}">Ta bort</button>
             </div>
         </div>
-    `).join('');
+    `;}).join('');
 
     // Bind events
     container.querySelectorAll('.btn-edit-cust').forEach(btn => {
