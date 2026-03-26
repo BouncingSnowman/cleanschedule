@@ -208,6 +208,7 @@ body {
     padding: 24px 28px;
     height: 100%;
     flex-direction: column;
+    overflow-y: auto;
 }
 
 .view.active {

@@ -6,8 +6,8 @@ import {
     getEmployees, getCustomers, getEmployee, getCustomer,
     getJobOccurrencesForWeek, getUnscheduledJobs, addJob, updateJob, deleteJob,
     EMPLOYEE_COLORS, isEmployeeOffOnDate
-} from './store.js?v=20';
-import { openModal, closeModal } from './modals.js?v=20';
+} from './store.js?v=21';
+import { openModal, closeModal } from './modals.js?v=21';
 
 const DAYS_SV = ['Måndag', 'Tisdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lördag'];
 const MONTHS_SV = ['januari', 'februari', 'mars', 'april', 'maj', 'juni',
