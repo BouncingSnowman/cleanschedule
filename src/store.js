@@ -4,7 +4,22 @@
  * All write operations persist to Supabase and update local cache.
  */
 
-import { dbSelect, dbInsert, dbUpdate, dbDelete, isLoggedIn } from './supabase.js?v=10';
+import { dbSelect, dbInsert, dbUpdate, dbDelete, isLoggedIn } from './supabase.js?v=11';
+
+const SUPABASE_URL = 'https://cywcnyimlhiwbbqqzvoe.supabase.co';
+
+/** Fire-and-forget push notification via Edge Function */
+async function sendPush(type, employeeEmail, title, body) {
+    try {
+        await fetch(`${SUPABASE_URL}/functions/v1/send-push`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type, employee_email: employeeEmail, title, body }),
+        });
+    } catch (e) {
+        console.warn('Push notification failed (non-blocking):', e);
+    }
+}
 
 const EMPLOYEE_COLORS = [
     { id: 'coral',   color: '#f87171', bg: '#fef2f2' },
@@ -242,6 +257,32 @@ export async function addJob(job) {
     const rows = await dbInsert('jobs', toDbJob(job));
     const added = mapFromDb(rows, 'job')[0];
     _cache.jobs.push(added);
+
+    // Send push notification
+    if (added.employeeId && added.date) {
+        // Assigned job → notify employee
+        const emp = getEmployee(added.employeeId);
+        const cust = getCustomer(added.customerId);
+        if (emp?.email) {
+            sendPush(
+                'assigned',
+                emp.email,
+                'Nytt jobb tilldelat',
+                `${cust?.name || 'Okänd kund'} — ${added.date}${added.startTime ? ' kl ' + added.startTime : ''}`
+            );
+        }
+    } else if (!added.employeeId || !added.date) {
+        // Unscheduled job → notify all
+        const cust = getCustomer(added.customerId);
+        // Send to all allowed emails
+        sendPush(
+            'unscheduled',
+            'ingeholberg@gmail.com',
+            'Nytt oplanerat jobb',
+            `${cust?.name || 'Okänd kund'} behöver schemaläggas`
+        );
+    }
+
     return added;
 }
 
