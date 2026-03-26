@@ -2,10 +2,10 @@
  * Veckoplan — Settings (Notification Preferences)
  */
 
-import { getUser } from './supabase.js?v=12';
+import { getUser } from './supabase.js?v=13';
 import {
     dbGetSubscription, dbUpsertSubscription, dbUpdateSubscriptionPrefs
-} from './supabase.js?v=12';
+} from './supabase.js?v=13';
 
 const VAPID_PUBLIC_KEY = 'BJC_-JfmMRGUnnkfibR52IGARups1q-t-jOGLee8FoA8G_oHH-v9QNf3PrqGrmz_gVWCLAzwSZN8A1gd72q4E_c';
 
@@ -134,20 +134,22 @@ export async function renderSettings() {
                     applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
                 });
                 const keys = sub.toJSON().keys;
-                    await dbUpsertSubscription({
-                        endpoint: sub.endpoint,
-                        keys_p256dh: keys.p256dh,
-                        keys_auth: keys.auth,
-                        notify_morning: true,
-                        morning_time: '07:00',
-                        notify_unscheduled: true,
-                        notify_assigned: true,
-                    });
+                await dbUpsertSubscription({
+                    endpoint: sub.endpoint,
+                    keys_p256dh: keys.p256dh,
+                    keys_auth: keys.auth,
+                    notify_morning: true,
+                    morning_time: '07:00',
+                    notify_unscheduled: true,
+                    notify_assigned: true,
+                });
                 prefsCard?.classList.remove('disabled');
                 document.querySelectorAll('#notification-prefs input').forEach(inp => inp.disabled = false);
+                showSettingsStatus('✅ Push-notiser aktiverade!');
             } catch (e) {
                 console.error('Push subscribe error:', e);
                 pushToggle.checked = false;
+                showSettingsStatus('❌ Fel: ' + e.message, true);
             }
         } else {
             // Unsubscribe
@@ -203,4 +205,18 @@ function urlBase64ToUint8Array(base64String) {
     const arr = new Uint8Array(raw.length);
     for (let i = 0; i < raw.length; ++i) arr[i] = raw.charCodeAt(i);
     return arr;
+}
+
+function showSettingsStatus(msg, isError = false) {
+    let el = document.getElementById('settings-status');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'settings-status';
+        el.style.cssText = 'padding:12px 16px;border-radius:8px;margin-top:16px;font-size:0.9rem;';
+        document.querySelector('.settings-section')?.appendChild(el);
+    }
+    el.textContent = msg;
+    el.style.background = isError ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)';
+    el.style.color = isError ? '#f87171' : '#34d399';
+    setTimeout(() => el.remove(), 5000);
 }
