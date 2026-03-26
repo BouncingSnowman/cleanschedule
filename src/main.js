@@ -3,14 +3,14 @@
  */
 
 import { restoreSession, isLoggedIn, signOut, handleOAuthCallback, getUser } from './supabase.js?v=8';
-import { initAuth, renderAuthView } from './auth.js?v=3';
-import { loadAllData, getUnscheduledJobs } from './store.js?v=3';
-import { initCalendar, renderCalendar, renderUnscheduledPanel } from './calendar.js?v=3';
-import { initEmployees, renderEmployees } from './employees.js?v=3';
-import { initCustomers, renderCustomers } from './customers.js?v=3';
+import { initAuth, renderAuthView } from './auth.js?v=8';
+import { loadAllData, getUnscheduledJobs } from './store.js?v=8';
+import { initCalendar, renderCalendar, renderUnscheduledPanel } from './calendar.js?v=8';
+import { initEmployees, renderEmployees } from './employees.js?v=8';
+import { initCustomers, renderCustomers } from './customers.js?v=8';
 import { initDashboard, renderDashboard } from './dashboard.js?v=7';
 import { initSettings, renderSettings } from './settings.js?v=8';
-import { exportData, importData, importCustomersFromCsv } from './store.js?v=3';
+import { exportData, importData, importCustomersFromCsv } from './store.js?v=8';
 
 document.addEventListener('DOMContentLoaded', async () => {
     initAuth(onLoginSuccess);
