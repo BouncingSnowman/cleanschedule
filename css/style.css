@@ -1905,7 +1905,6 @@ input:checked + .toggle-slider::before {
     }
 
     .timeline-grid {
-        overflow-x: auto;
         min-width: max-content;
     }
 
