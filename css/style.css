@@ -2527,6 +2527,12 @@ body.fullscreen-calendar .week-title {
         height: auto;
         overflow: visible;
         padding: 0;
+        display: none !important;
+    }
+
+    /* Always show schedule in print, hide all others */
+    #view-schedule {
+        display: flex !important;
     }
 
     .view-header {
