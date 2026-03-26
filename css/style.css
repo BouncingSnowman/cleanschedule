@@ -239,9 +239,10 @@ body {
 .week-title {
     font-size: 1.2rem;
     font-weight: 600;
-    min-width: 280px;
+    width: 340px;
     text-align: center;
     letter-spacing: -0.02em;
+    flex-shrink: 0;
 }
 
 /* --- Buttons --- */
