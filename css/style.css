@@ -1066,6 +1066,7 @@ body {
     max-width: 480px;
     max-height: 85vh;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     animation: modalIn 0.25s ease;
 }
 
@@ -1735,7 +1736,10 @@ select.form-input {
 
     .modal {
         width: 95%;
-        max-height: 90vh;
+        max-height: 80vh;
+        max-height: 80dvh;
+        margin: 10vh auto;
+        margin: 10dvh auto;
     }
 
     /* Hide unscheduled panel on mobile (accessible via dashboard cards) */
