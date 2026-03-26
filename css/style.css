@@ -2494,3 +2494,80 @@ body.fullscreen-calendar .week-title {
 }
 
 
+/* --- Print Styles --- */
+@media print {
+    /* Hide everything except the schedule grid */
+    #sidebar, #mobile-header, .sidebar-overlay,
+    #loading-overlay, #modal-overlay, #toast,
+    .unscheduled-panel, .day-timeline,
+    #btn-add-job, #btn-today, #btn-fullscreen,
+    #btn-prev-week, #btn-next-week,
+    .add-job-hint {
+        display: none !important;
+    }
+
+    body {
+        overflow: visible;
+        height: auto;
+        background: white;
+        color: black;
+    }
+
+    #app {
+        display: block;
+        height: auto;
+        overflow: visible;
+    }
+
+    #main-content {
+        overflow: visible;
+    }
+
+    .view {
+        height: auto;
+        overflow: visible;
+        padding: 0;
+    }
+
+    .view-header {
+        margin-bottom: 12px;
+    }
+
+    .week-title {
+        font-size: 1rem;
+        color: black;
+    }
+
+    .schedule-layout {
+        display: block;
+    }
+
+    .schedule-grid-wrapper {
+        overflow: visible;
+        border: 1px solid #ccc;
+        box-shadow: none;
+    }
+
+    .schedule-grid {
+        min-width: unset;
+    }
+
+    .grid-header-cell, .grid-employee-cell {
+        background: #f5f5f5 !important;
+        color: black !important;
+    }
+
+    .grid-header-cell.today {
+        background: #e8f0fe !important;
+    }
+
+    .grid-day-cell {
+        border-color: #ccc !important;
+    }
+
+    .job-block {
+        box-shadow: none;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}
