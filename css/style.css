@@ -2557,6 +2557,19 @@ body.fullscreen-calendar .week-title {
         color: black !important;
     }
 
+    .grid-day-date {
+        color: black !important;
+    }
+
+    .grid-header-cell.today .grid-day-date {
+        color: #1a73e8 !important;
+    }
+
+    .emp-color-dot {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
     .grid-header-cell.today {
         background: #e8f0fe !important;
     }
