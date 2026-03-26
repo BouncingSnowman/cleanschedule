@@ -36,6 +36,7 @@ export async function renderSettings() {
     const notifyMorning = dbPrefs?.notify_morning ?? true;
     const morningTime = dbPrefs?.morning_time ?? '07:00';
     const notifyUnscheduled = dbPrefs?.notify_unscheduled ?? true;
+    const notifyAssigned = dbPrefs?.notify_assigned ?? true;
     const isSubscribed = !!existingSub;
 
     container.innerHTML = `
@@ -88,6 +89,17 @@ export async function renderSettings() {
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
+
+                    <div class="setting-row" style="margin-top: 12px">
+                        <div class="setting-info">
+                            <div class="setting-label">✅ Tilldelat jobb</div>
+                            <div class="setting-desc">Notis när du har blivit tilldelad ett nytt jobb</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggle-assigned" ${notifyAssigned ? 'checked' : ''} ${!isSubscribed ? 'disabled' : ''}>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
                 </div>
             `}
         </div>
@@ -100,6 +112,7 @@ export async function renderSettings() {
     const morningToggle = document.getElementById('toggle-morning');
     const morningTimeInput = document.getElementById('morning-time');
     const unscheduledToggle = document.getElementById('toggle-unscheduled');
+    const assignedToggle = document.getElementById('toggle-assigned');
     const prefsCard = document.getElementById('notification-prefs');
     const timeRow = document.getElementById('morning-time-row');
 
@@ -118,14 +131,15 @@ export async function renderSettings() {
                     applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
                 });
                 const keys = sub.toJSON().keys;
-                await dbUpsertSubscription({
-                    endpoint: sub.endpoint,
-                    keys_p256dh: keys.p256dh,
-                    keys_auth: keys.auth,
-                    notify_morning: true,
-                    morning_time: '07:00',
-                    notify_unscheduled: true,
-                });
+                    await dbUpsertSubscription({
+                        endpoint: sub.endpoint,
+                        keys_p256dh: keys.p256dh,
+                        keys_auth: keys.auth,
+                        notify_morning: true,
+                        morning_time: '07:00',
+                        notify_unscheduled: true,
+                        notify_assigned: true,
+                    });
                 prefsCard?.classList.remove('disabled');
                 document.querySelectorAll('#notification-prefs input').forEach(inp => inp.disabled = false);
             } catch (e) {
@@ -157,6 +171,11 @@ export async function renderSettings() {
         await savePrefs();
     });
 
+    // Toggle assigned notification
+    assignedToggle?.addEventListener('change', async () => {
+        await savePrefs();
+    });
+
     async function savePrefs() {
         const sub = await swRegistration.pushManager.getSubscription();
         if (!sub) return;
@@ -165,6 +184,7 @@ export async function renderSettings() {
                 notify_morning: morningToggle?.checked ?? true,
                 morning_time: morningTimeInput?.value ?? '07:00',
                 notify_unscheduled: unscheduledToggle?.checked ?? true,
+                notify_assigned: assignedToggle?.checked ?? true,
             });
         } catch (e) {
             console.error('Save prefs error:', e);

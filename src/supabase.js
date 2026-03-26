@@ -220,6 +220,7 @@ export async function dbUpsertSubscription(sub) {
                 notify_morning: sub.notify_morning,
                 morning_time: sub.morning_time,
                 notify_unscheduled: sub.notify_unscheduled,
+                notify_assigned: sub.notify_assigned,
             },
         });
     }
