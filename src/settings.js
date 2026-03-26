@@ -2,10 +2,10 @@
  * Veckoplan — Settings (Notification Preferences)
  */
 
-import { getUser } from './supabase.js?v=11';
+import { getUser } from './supabase.js?v=12';
 import {
     dbGetSubscription, dbUpsertSubscription, dbUpdateSubscriptionPrefs
-} from './supabase.js?v=11';
+} from './supabase.js?v=12';
 
 const VAPID_PUBLIC_KEY = 'BJC_-JfmMRGUnnkfibR52IGARups1q-t-jOGLee8FoA8G_oHH-v9QNf3PrqGrmz_gVWCLAzwSZN8A1gd72q4E_c';
 
@@ -42,6 +42,9 @@ export async function renderSettings() {
     container.innerHTML = `
         <div class="settings-section">
             <h2 class="settings-title">🔔 Notiser</h2>
+                <div class="settings-notice info">
+                    <p>💡 <strong>Viktigt:</strong> För att ta emot notiser måste ditt anställdkort ha samma e-postadress som du loggar in med.</p>
+                </div>
             ${!pushSupported ? `
                 <div class="settings-notice warning">
                     <p>Push-notiser stöds inte i den här webbläsaren.</p>

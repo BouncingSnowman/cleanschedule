@@ -1715,6 +1715,21 @@ input:checked + .toggle-slider::before {
     font-size: 0.9rem;
 }
 
+.settings-notice.info {
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: var(--radius-lg);
+    padding: 14px 18px;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+}
+
+.settings-notice.info p {
+    margin: 0;
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+
 /* --- Print Styles --- */
 @media print {
     body {
