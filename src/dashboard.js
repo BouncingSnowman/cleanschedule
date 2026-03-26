@@ -4,8 +4,8 @@
 
 import {
     getEmployees, getCustomers, getJobs, getUnscheduledJobs,
-    getJobOccurrencesForWeek, EMPLOYEE_COLORS
-} from './store.js?v=28';
+    getJobOccurrencesForWeek, EMPLOYEE_COLORS, toLocalDateStr
+} from './store.js?v=29';
 
 export function initDashboard() {
     // Dashboard re-renders when navigated to
@@ -26,7 +26,7 @@ export function renderDashboard() {
     weekStart.setDate(mondayOffset);
     weekStart.setHours(0, 0, 0, 0);
 
-    const weekStartStr = weekStart.toISOString().split('T')[0];
+    const weekStartStr = toLocalDateStr(weekStart);
     const occurrences = getJobOccurrencesForWeek(weekStartStr);
 
     // --- Stats ---
@@ -53,14 +53,14 @@ export function renderDashboard() {
     for (let i = 0; i < 6; i++) {
         const d = new Date(weekStart);
         d.setDate(d.getDate() + i);
-        const ds = d.toISOString().split('T')[0];
+        const ds = toLocalDateStr(d);
         const dayJobs = occurrences.filter(j => j.occurrenceDate === ds);
         dayJobCounts.push(dayJobs.length);
         dayHoursCounts.push(dayJobs.reduce((s, j) => s + (parseFloat(j.hours) || 0), 0));
     }
 
     // Today's jobs
-    const todayStr = now.toISOString().split('T')[0];
+    const todayStr = toLocalDateStr(now);
     const todayJobs = occurrences.filter(j => j.occurrenceDate === todayStr);
 
     // Customer distribution (donut chart data)

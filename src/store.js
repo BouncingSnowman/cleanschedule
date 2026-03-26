@@ -4,7 +4,7 @@
  * All write operations persist to Supabase and update local cache.
  */
 
-import { dbSelect, dbInsert, dbUpdate, dbDelete, isLoggedIn } from './supabase.js?v=28';
+import { dbSelect, dbInsert, dbUpdate, dbDelete, isLoggedIn } from './supabase.js?v=29';
 
 const SUPABASE_URL = 'https://cywcnyimlhiwbbqqzvoe.supabase.co';
 
@@ -31,6 +31,13 @@ const EMPLOYEE_COLORS = [
     { id: 'pink',    color: '#f472b6', bg: '#fdf2f8' },
     { id: 'orange',  color: '#fb923c', bg: '#fff7ed' },
 ];
+
+/** Format a Date as YYYY-MM-DD in *local* time (avoids UTC shift from toISOString) */
+export function toLocalDateStr(d) {
+    return d.getFullYear() + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0');
+}
 
 // --- In-memory cache ---
 let _cache = {
@@ -239,7 +246,7 @@ export function getJobOccurrencesForWeek(weekStart) {
                     }
 
                     if (match) {
-                        const dateStr = targetDate.toISOString().split('T')[0];
+                        const dateStr = toLocalDateStr(targetDate);
                         occurrences.push({ ...job, occurrenceDate: dateStr, isRecurring: true });
                     }
                 }
@@ -345,7 +352,7 @@ export function exportData() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `cleanschedule-backup-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `cleanschedule-backup-${toLocalDateStr(new Date())}.json`;
     a.click();
     URL.revokeObjectURL(url);
 }

@@ -2,8 +2,8 @@
  * CleanSchedule — Employee Management UI
  */
 
-import { getEmployees, addEmployee, updateEmployee, deleteEmployee, EMPLOYEE_COLORS, getTimeOffForEmployee, addTimeOff, deleteTimeOff } from './store.js?v=28';
-import { openModal, closeModal } from './modals.js?v=28';
+import { getEmployees, addEmployee, updateEmployee, deleteEmployee, EMPLOYEE_COLORS, getTimeOffForEmployee, addTimeOff, deleteTimeOff, toLocalDateStr } from './store.js?v=29';
+import { openModal, closeModal } from './modals.js?v=29';
 
 let onChangeCallback = null;
 
@@ -211,7 +211,7 @@ function showEmployeeForm(existing = null) {
 
 function showTimeOffForm(emp) {
     const entries = getTimeOffForEmployee(emp.id);
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalDateStr(new Date());
 
     const entriesHtml = entries.length === 0
         ? '<p style="color:var(--text-muted); font-size:0.85rem">Ingen ledighet registrerad.</p>'
