@@ -2049,6 +2049,7 @@ input:checked + .toggle-slider::before {
     background: var(--bg-primary);
     border-color: var(--border);
     color: var(--text-primary);
+    color-scheme: dark;
 }
 
 [data-theme="dark"] .modal-overlay .modal {
