@@ -802,6 +802,7 @@ body {
     gap: 16px;
     overflow-y: auto;
     flex: 1;
+    padding-top: 4px;
 }
 
 .card {

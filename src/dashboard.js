@@ -5,7 +5,7 @@
 import {
     getEmployees, getCustomers, getJobs, getUnscheduledJobs,
     getJobOccurrencesForWeek, EMPLOYEE_COLORS
-} from './store.js?v=17';
+} from './store.js?v=18';
 
 export function initDashboard() {
     // Dashboard re-renders when navigated to
