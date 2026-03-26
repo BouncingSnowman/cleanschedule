@@ -5,7 +5,7 @@
 import {
     getEmployees, getCustomers, getJobs, getUnscheduledJobs,
     getJobOccurrencesForWeek, EMPLOYEE_COLORS, toLocalDateStr
-} from './store.js?v=30';
+} from './store.js?v=31';
 
 export function initDashboard() {
     // Dashboard re-renders when navigated to
@@ -138,7 +138,7 @@ export function renderDashboard() {
         <div class="dashboard-columns" style="margin-top: 20px">
             <!-- Employee Utilization -->
             <div class="dash-panel">
-                <h2 class="dash-panel-title">Beläggning per anställd</h2>
+                <h2 class="dash-panel-title">Beläggning per anställd denna vecka</h2>
                 ${empStats.length === 0 ? '<p class="text-muted">Inga anställda tillagda ännu.</p>' :
                 empStats.map(e => {
                     const isOver = e.hasTarget && e.hoursBooked > e.target;
