@@ -2,10 +2,10 @@
  * Veckoplan — Settings (Notification Preferences)
  */
 
-import { getUser } from './supabase.js?v=31';
+import { getUser } from './supabase.js?v=32';
 import {
     dbGetSubscription, dbUpsertSubscription, dbUpdateSubscriptionPrefs
-} from './supabase.js?v=31';
+} from './supabase.js?v=32';
 
 const VAPID_PUBLIC_KEY = 'BJC_-JfmMRGUnnkfibR52IGARups1q-t-jOGLee8FoA8G_oHH-v9QNf3PrqGrmz_gVWCLAzwSZN8A1gd72q4E_c';
 
@@ -33,8 +33,6 @@ export async function renderSettings() {
         } catch (e) { /* ignore */ }
     }
 
-    const notifyMorning = dbPrefs?.notify_morning ?? true;
-    const morningTime = dbPrefs?.morning_time ?? '07:00';
     const notifyUnscheduled = dbPrefs?.notify_unscheduled ?? true;
     const notifyAssigned = dbPrefs?.notify_assigned ?? true;
     const isSubscribed = !!existingSub;
@@ -67,23 +65,6 @@ export async function renderSettings() {
                 <div class="settings-card ${!isSubscribed ? 'disabled' : ''}" id="notification-prefs">
                     <div class="setting-row">
                         <div class="setting-info">
-                            <div class="setting-label">📅 Morgon-påminnelse</div>
-                            <div class="setting-desc">Få en sammanfattning av dagens jobb varje morgon</div>
-                        </div>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="toggle-morning" ${notifyMorning ? 'checked' : ''} ${!isSubscribed ? 'disabled' : ''}>
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <div class="setting-row sub-setting" id="morning-time-row" style="${notifyMorning ? '' : 'display:none'}">
-                        <div class="setting-info">
-                            <div class="setting-label">Tid</div>
-                        </div>
-                        <input type="time" id="morning-time" class="time-input" value="${morningTime}" ${!isSubscribed ? 'disabled' : ''}>
-                    </div>
-
-                    <div class="setting-row" style="margin-top: 12px">
-                        <div class="setting-info">
                             <div class="setting-label">📦 Nya oplanerade jobb</div>
                             <div class="setting-desc">Notis när ett nytt oplanerat jobb läggs till</div>
                         </div>
@@ -112,12 +93,9 @@ export async function renderSettings() {
     if (!pushSupported) return;
 
     const pushToggle = document.getElementById('toggle-push');
-    const morningToggle = document.getElementById('toggle-morning');
-    const morningTimeInput = document.getElementById('morning-time');
     const unscheduledToggle = document.getElementById('toggle-unscheduled');
     const assignedToggle = document.getElementById('toggle-assigned');
     const prefsCard = document.getElementById('notification-prefs');
-    const timeRow = document.getElementById('morning-time-row');
 
     // Toggle push on/off
     pushToggle?.addEventListener('change', async () => {
@@ -138,8 +116,6 @@ export async function renderSettings() {
                     endpoint: sub.endpoint,
                     keys_p256dh: keys.p256dh,
                     keys_auth: keys.auth,
-                    notify_morning: true,
-                    morning_time: '07:00',
                     notify_unscheduled: true,
                     notify_assigned: true,
                 });
@@ -160,16 +136,6 @@ export async function renderSettings() {
         }
     });
 
-    // Toggle morning notification
-    morningToggle?.addEventListener('change', async () => {
-        if (timeRow) timeRow.style.display = morningToggle.checked ? '' : 'none';
-        await savePrefs();
-    });
-
-    // Change morning time
-    morningTimeInput?.addEventListener('change', async () => {
-        await savePrefs();
-    });
 
     // Toggle unscheduled notification
     unscheduledToggle?.addEventListener('change', async () => {
@@ -186,8 +152,6 @@ export async function renderSettings() {
         if (!sub) return;
         try {
             await dbUpdateSubscriptionPrefs(sub.endpoint, {
-                notify_morning: morningToggle?.checked ?? true,
-                morning_time: morningTimeInput?.value ?? '07:00',
                 notify_unscheduled: unscheduledToggle?.checked ?? true,
                 notify_assigned: assignedToggle?.checked ?? true,
             });
