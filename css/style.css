@@ -1886,6 +1886,33 @@ input:checked + .toggle-slider::before {
     line-height: 1.5;
 }
 
+/* --- Day Timeline: Mobile --- */
+@media (max-width: 768px) {
+    .timeline-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .timeline-filter {
+        width: 100%;
+    }
+
+    .timeline-grid {
+        overflow-x: auto;
+        min-width: max-content;
+    }
+
+    .timeline-col-header,
+    .timeline-col {
+        min-width: 100px;
+    }
+
+    .day-timeline {
+        overflow-x: auto;
+    }
+}
+
 /* --- Print Styles --- */
 @media print {
     body {
