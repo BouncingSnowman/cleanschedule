@@ -360,6 +360,8 @@ body {
     display: flex;
     gap: 16px;
     flex: 1;
+    min-height: 350px;
+    flex-shrink: 0;
     overflow: hidden;
 }
 
