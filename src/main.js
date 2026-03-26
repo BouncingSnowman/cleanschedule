@@ -2,13 +2,14 @@
  * CleanSchedule — Main Entry Point (with Auth)
  */
 
-import { restoreSession, isLoggedIn, signOut, handleOAuthCallback, getUser } from './supabase.js?v=3';
+import { restoreSession, isLoggedIn, signOut, handleOAuthCallback, getUser } from './supabase.js?v=8';
 import { initAuth, renderAuthView } from './auth.js?v=3';
 import { loadAllData, getUnscheduledJobs } from './store.js?v=3';
 import { initCalendar, renderCalendar, renderUnscheduledPanel } from './calendar.js?v=3';
 import { initEmployees, renderEmployees } from './employees.js?v=3';
 import { initCustomers, renderCustomers } from './customers.js?v=3';
 import { initDashboard, renderDashboard } from './dashboard.js?v=7';
+import { initSettings, renderSettings } from './settings.js?v=8';
 import { exportData, importData, importCustomersFromCsv } from './store.js?v=3';
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -86,6 +87,7 @@ async function onLoginSuccess() {
             case 'schedule': renderCalendar(); renderUnscheduledPanel(); break;
             case 'employees': renderEmployees(); break;
             case 'customers': renderCustomers(); break;
+            case 'settings': renderSettings(); break;
         }
         updateUnscheduledNav();
         closeMobileMenu();

@@ -195,3 +195,45 @@ export async function dbDelete(table, id) {
         query: `id=eq.${id}`,
     });
 }
+
+// --- Push Subscription helpers ---
+
+export async function dbGetSubscription(endpoint) {
+    const uid = getUserId();
+    const results = await dbFetch('push_subscriptions', {
+        query: `user_id=eq.${uid}&endpoint=eq.${encodeURIComponent(endpoint)}&limit=1`,
+    });
+    return results?.[0] || null;
+}
+
+export async function dbUpsertSubscription(sub) {
+    const uid = getUserId();
+    // Check if exists
+    const existing = await dbGetSubscription(sub.endpoint);
+    if (existing) {
+        return dbFetch('push_subscriptions', {
+            method: 'PATCH',
+            query: `id=eq.${existing.id}`,
+            body: {
+                keys_p256dh: sub.keys_p256dh,
+                keys_auth: sub.keys_auth,
+                notify_morning: sub.notify_morning,
+                morning_time: sub.morning_time,
+                notify_unscheduled: sub.notify_unscheduled,
+            },
+        });
+    }
+    return dbFetch('push_subscriptions', {
+        method: 'POST',
+        body: { ...sub, user_id: uid },
+    });
+}
+
+export async function dbUpdateSubscriptionPrefs(endpoint, prefs) {
+    const uid = getUserId();
+    return dbFetch('push_subscriptions', {
+        method: 'PATCH',
+        query: `user_id=eq.${uid}&endpoint=eq.${encodeURIComponent(endpoint)}`,
+        body: prefs,
+    });
+}

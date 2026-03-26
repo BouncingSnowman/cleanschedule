@@ -1,0 +1,17 @@
+{
+  "name": "Veckoplan",
+  "short_name": "Veckoplan",
+  "description": "Schemaläggning för städföretag",
+  "start_url": "/cleanschedule/",
+  "scope": "/cleanschedule/",
+  "display": "standalone",
+  "background_color": "#080d1a",
+  "theme_color": "#22d3ee",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✨</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

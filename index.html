@@ -3,12 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CleanSchedule — Schemaläggning för städföretag</title>
+    <title>Veckoplan — Schemaläggning för städföretag</title>
     <meta name="description" content="Enkel och smidig schemaläggning för städföretag. Hantera anställda, kunder och jobb i en veckokalender.">
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#080d1a">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=7">
+    <link rel="stylesheet" href="css/style.css?v=8">
 </head>
 <body>
     <div id="app">
@@ -59,6 +63,12 @@
                     <button class="nav-btn" data-view="customers" id="nav-customers">
                         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                         Kunder
+                    </button>
+                </li>
+                <li>
+                    <button class="nav-btn" data-view="settings" id="nav-settings">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                        Inställningar
                     </button>
                 </li>
             </ul>
@@ -200,6 +210,16 @@
                     <!-- Rendered by JS -->
                 </div>
             </section>
+
+            <!-- Settings View -->
+            <section id="view-settings" class="view">
+                <header class="view-header">
+                    <h1>Inställningar</h1>
+                </header>
+                <div id="settings-content">
+                    <!-- Rendered by JS -->
+                </div>
+            </section>
         </main>
     </div>
 
@@ -229,7 +249,7 @@
         <span id="toast-message"></span>
     </div>
 
-    <script type="module" src="src/supabase.js"></script>
+    <script type="module" src="src/supabase.js?v=8"></script>
     <script type="module" src="src/auth.js"></script>
     <script type="module" src="src/store.js?v=3"></script>
     <script type="module" src="src/modals.js?v=3"></script>
@@ -237,6 +257,12 @@
     <script type="module" src="src/customers.js?v=3"></script>
     <script type="module" src="src/calendar.js?v=3"></script>
     <script type="module" src="src/dashboard.js?v=7"></script>
-    <script type="module" src="src/main.js?v=7"></script>
+    <script type="module" src="src/settings.js?v=8"></script>
+    <script type="module" src="src/main.js?v=8"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/cleanschedule/sw.js').catch(() => {});
+        }
+    </script>
 </body>
 </html>
