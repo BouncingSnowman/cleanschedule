@@ -5,7 +5,7 @@
 import {
     getEmployees, getCustomers, getJobs, getUnscheduledJobs,
     getJobOccurrencesForWeek, EMPLOYEE_COLORS
-} from './store.js';
+} from './store.js?v=3';
 
 export function initDashboard() {
     // Dashboard re-renders when navigated to
@@ -40,10 +40,11 @@ export function renderDashboard() {
         const colorObj = EMPLOYEE_COLORS.find(c => c.id === emp.color) || EMPLOYEE_COLORS[0];
         const empJobs = occurrences.filter(j => j.employeeId === emp.id);
         const hoursBooked = empJobs.reduce((sum, j) => sum + (parseFloat(j.hours) || 0), 0);
-        const target = parseFloat(emp.defaultHours) || 40;
-        const pct = Math.min(Math.round((hoursBooked / target) * 100), 100);
-        return { ...emp, hoursBooked, target, pct, jobCount: empJobs.length, colorObj };
-    });
+        const hasTarget = emp.type !== 'contractor' || parseFloat(emp.defaultHours) > 0;
+        const target = hasTarget ? (parseFloat(emp.defaultHours) || 40) : 0;
+        const pct = hasTarget ? Math.min(Math.round((hoursBooked / target) * 100), 100) : 0;
+        return { ...emp, hoursBooked, target, pct, hasTarget, jobCount: empJobs.length, colorObj };
+    }).filter(e => e.hasTarget || e.hoursBooked > 0);
 
     // Weekly distribution (jobs per day)
     const dayNames = ['Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör'];
@@ -74,20 +75,20 @@ export function renderDashboard() {
     }).sort((a, b) => b.count - a.count);
 
     // Avg hours per job
-    const avgHours = totalJobsThisWeek > 0 ? (totalHoursThisWeek / totalJobsThisWeek).toFixed(1) : '—';
+    const avgHours = totalJobsThisWeek > 0 ? (totalHoursThisWeek / totalJobsThisWeek).toFixed(1) : '0';
 
     // --- BUILD HTML ---
     container.innerHTML = `
         <!-- Stats Cards -->
         <div class="stats-row">
-            <div class="stat-card">
+            <div class="stat-card clickable" data-navigate="schedule">
                 <div class="stat-icon" style="background: rgba(59,130,246,0.1); color: var(--accent)">📋</div>
                 <div class="stat-content">
                     <div class="stat-value">${totalJobsThisWeek}</div>
                     <div class="stat-label">Jobb denna vecka</div>
                 </div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card clickable" data-navigate="schedule">
                 <div class="stat-icon" style="background: rgba(16,185,129,0.1); color: var(--success)">⏱</div>
                 <div class="stat-content">
                     <div class="stat-value">${totalHoursThisWeek}h</div>
@@ -101,7 +102,7 @@ export function renderDashboard() {
                     <div class="stat-label">Snitt per jobb</div>
                 </div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card clickable" data-navigate="schedule">
                 <div class="stat-icon" style="background: rgba(239,68,68,0.1); color: var(--danger)">📦</div>
                 <div class="stat-content">
                     <div class="stat-value">${unscheduled.length}</div>
@@ -138,12 +139,14 @@ export function renderDashboard() {
                         <div class="util-info">
                             <span class="emp-color-dot" style="background: ${e.colorObj.color}"></span>
                             <span class="util-name">${escHtml(e.name)}</span>
-                            <span class="util-hours">${e.hoursBooked}h / ${e.target}h</span>
+                            <span class="util-hours">${e.hoursBooked}h${e.hasTarget ? ` / ${e.target}h` : ''}</span>
                         </div>
+                        ${e.hasTarget ? `
                         <div class="util-bar-bg">
                             <div class="util-bar-fill" style="width: ${e.pct}%; background: ${e.colorObj.color}"></div>
                         </div>
                         <span class="util-pct">${e.pct}%</span>
+                        ` : ''}
                     </div>
                 `).join('')}
             </div>
@@ -177,6 +180,14 @@ export function renderDashboard() {
             </div>
         </div>
     `;
+
+    // Bind clickable stat cards to navigate to schedule view
+    container.querySelectorAll('.stat-card.clickable').forEach(card => {
+        card.addEventListener('click', () => {
+            const view = card.dataset.navigate;
+            if (view && window._switchView) window._switchView(view);
+        });
+    });
 }
 
 // --- SVG Bar Chart ---
@@ -185,12 +196,13 @@ function renderBarChart(labels, values, unit) {
     const barWidth = 32;
     const gap = 16;
     const chartWidth = labels.length * (barWidth + gap);
-    const chartHeight = 140;
+    const topPad = 24;
     const bottomPad = 24;
+    const chartHeight = 160 + topPad;
 
     const bars = labels.map((label, i) => {
         const v = values[i] || 0;
-        const barH = Math.max((v / maxVal) * (chartHeight - bottomPad - 10), 2);
+        const barH = Math.max((v / maxVal) * (chartHeight - bottomPad - topPad - 10), 2);
         const x = i * (barWidth + gap) + gap / 2;
         const y = chartHeight - bottomPad - barH;
         const colors = ['#3b82f6', '#60a5fa', '#3b82f6', '#60a5fa', '#3b82f6', '#93c5fd'];
@@ -199,7 +211,7 @@ function renderBarChart(labels, values, unit) {
                 <animate attributeName="height" from="0" to="${barH}" dur="0.5s" fill="freeze"/>
                 <animate attributeName="y" from="${chartHeight - bottomPad}" to="${y}" dur="0.5s" fill="freeze"/>
             </rect>
-            <text x="${x + barWidth / 2}" y="${y - 5}" text-anchor="middle" font-size="11" font-weight="600" fill="var(--text-secondary)">${v}${unit}</text>
+            <text x="${x + barWidth / 2}" y="${y - 6}" text-anchor="middle" font-size="11" font-weight="600" fill="var(--text-secondary)">${v}${unit}</text>
             <text x="${x + barWidth / 2}" y="${chartHeight - 6}" text-anchor="middle" font-size="11" fill="var(--text-muted)">${label}</text>
         `;
     }).join('');

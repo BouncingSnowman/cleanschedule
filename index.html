@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=6">
 </head>
 <body>
     <div id="app">
@@ -23,6 +23,9 @@
         <!-- Sidebar -->
         <nav id="sidebar">
             <div class="sidebar-logo">
+                <button id="sidebar-collapse-btn" class="btn-icon sidebar-collapse-btn" title="Dölj meny">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                </button>
                 <span class="logo-icon">✨</span>
                 <span class="logo-text">CleanSchedule</span>
             </div>
@@ -65,8 +68,16 @@
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
                     Skriv ut
                 </button>
+                <button id="btn-logout" class="sidebar-action-btn" title="Logga ut">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    Logga ut
+                </button>
             </div>
             <input type="file" id="import-file-input" accept=".json" hidden>
+            <button class="theme-toggle" id="btn-theme" title="Växla mörkt/ljust läge">
+                <span class="theme-toggle-icon" id="theme-icon">🌙</span>
+                <span id="theme-label">Mörkt läge</span>
+            </button>
             <div class="sidebar-footer">
                 <div class="user-badge">
                     <div class="user-avatar">👤</div>
@@ -74,6 +85,17 @@
                 </div>
             </div>
         </nav>
+
+        <!-- Auth View (shown when not logged in) -->
+        <section id="view-auth" class="auth-view hidden">
+            <div id="auth-content"></div>
+        </section>
+
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" class="loading-overlay hidden">
+            <div class="loading-spinner"></div>
+            <p>Laddar data...</p>
+        </div>
 
         <!-- Main Content -->
         <main id="main-content">
@@ -99,6 +121,9 @@
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
                         </button>
                         <button id="btn-today" class="btn-secondary">Idag</button>
+                        <button id="btn-fullscreen" class="btn-icon" title="Helskärm">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+                        </button>
                     </div>
                     <button id="btn-add-job" class="btn-primary">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -113,6 +138,9 @@
                     </div>
                     <aside class="unscheduled-panel" id="unscheduled-panel">
                         <div class="unscheduled-header">
+                            <button class="unscheduled-toggle-btn" id="btn-toggle-panel" title="Dölj/visa panel">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg>
+                            </button>
                             <h2>Oplanerade jobb <span class="unscheduled-badge" id="unscheduled-count">0</span></h2>
                             <button class="btn-primary btn-sm" id="btn-add-unscheduled">+ Nytt</button>
                         </div>
@@ -155,6 +183,11 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                         Lägg till kund
                     </button>
+                    <button id="btn-import-csv" class="btn-secondary" title="Importera kunder från Spiris CSV">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        Importera CSV
+                    </button>
+                    <input type="file" id="csv-file-input" accept=".csv" hidden>
                 </header>
                 <div id="customers-list" class="card-list">
                     <!-- Rendered by JS -->
@@ -189,12 +222,14 @@
         <span id="toast-message"></span>
     </div>
 
-    <script type="module" src="src/store.js"></script>
-    <script type="module" src="src/modals.js"></script>
-    <script type="module" src="src/employees.js"></script>
-    <script type="module" src="src/customers.js"></script>
-    <script type="module" src="src/calendar.js"></script>
-    <script type="module" src="src/dashboard.js"></script>
-    <script type="module" src="src/main.js"></script>
+    <script type="module" src="src/supabase.js"></script>
+    <script type="module" src="src/auth.js"></script>
+    <script type="module" src="src/store.js?v=3"></script>
+    <script type="module" src="src/modals.js?v=3"></script>
+    <script type="module" src="src/employees.js?v=3"></script>
+    <script type="module" src="src/customers.js?v=3"></script>
+    <script type="module" src="src/calendar.js?v=3"></script>
+    <script type="module" src="src/dashboard.js?v=5"></script>
+    <script type="module" src="src/main.js?v=5"></script>
 </body>
 </html>
