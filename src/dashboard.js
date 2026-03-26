@@ -5,7 +5,7 @@
 import {
     getEmployees, getCustomers, getJobs, getUnscheduledJobs,
     getJobOccurrencesForWeek, EMPLOYEE_COLORS, toLocalDateStr
-} from './store.js?v=29';
+} from './store.js?v=30';
 
 export function initDashboard() {
     // Dashboard re-renders when navigated to
@@ -98,7 +98,7 @@ export function renderDashboard() {
                 <div class="stat-icon" style="background: rgba(16,185,129,0.1); color: var(--success)">⏱</div>
                 <div class="stat-content">
                     <div class="stat-value">${totalHoursThisWeek}h</div>
-                    <div class="stat-label">Timmar bokat</div>
+                    <div class="stat-label">Timmar bokat denna vecka</div>
                 </div>
             </div>
             <div class="stat-card">

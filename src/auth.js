@@ -2,7 +2,7 @@
  * CleanSchedule — Auth UI (Google Only)
  */
 
-import { signInWithGoogle } from './supabase.js?v=29';
+import { signInWithGoogle } from './supabase.js?v=30';
 
 let onAuthSuccess = null;
 
