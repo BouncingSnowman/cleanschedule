@@ -2,37 +2,39 @@
 description: How to bump cache-busting version numbers across the project
 ---
 
-# CleanSchedule Version Bump
+# Veckoplan Version Bump
 
-CleanSchedule uses `?v=N` query parameters for cache-busting on CSS and JS files.
+Veckoplan uses `?v=N` query parameters for cache-busting on CSS and JS files.
 
-## What to bump
+## Automated Bump Script
 
-When you change a file, you need to bump its version in **all** places it's referenced:
-
-### 1. `index.html` — `<link>` and `<script>` tags
-```html
-<link rel="stylesheet" href="css/style.css?v=N">
-<script type="module" src="src/main.js?v=N"></script>
-<script type="module" src="src/dashboard.js?v=N"></script>
-<!-- etc -->
+// turbo
+Run the bump script from the project root:
+```powershell
+.\bump-versions.ps1
 ```
 
-### 2. ES module `import` statements inside JS files
-If you change `dashboard.js`, you must also update the import in `main.js`:
-```javascript
-import { initDashboard, renderDashboard } from './dashboard.js?v=N';
+This automatically:
+1. Finds the current max version number from `index.html`
+2. Replaces ALL `?v=N` in `index.html` (CSS + script tags)
+3. Replaces ALL `?v=N` in JS import statements inside `src/`
+4. Reports which files were updated
+
+## CRITICAL: Keep versions in sync
+
+All references to the same file **must** use the same version number. A mismatch (e.g. `?v=3` in an import but `?v=8` in the script tag) causes the browser to load the module **twice** as two different URLs, creating duplicate instances with separate state. This breaks session management and data loading.
+
+## Module dependency graph
 ```
-
-Similarly for other modules — check `main.js` imports and any cross-imports between:
-- `store.js` (imported by calendar, dashboard, employees, customers)
-- `modals.js` (imported by calendar)
-- `calendar.js` (imported by main)
-- `dashboard.js` (imported by main)
-- `employees.js` (imported by main)
-- `customers.js` (imported by main)
-- `supabase.js` (imported by main, auth, store)
-- `auth.js` (imported by main)
-
-### 3. Keep versions in sync
-All references to the same file must use the same version number. A mismatch (e.g. `?v=3` in an import but `?v=5` in the script tag) causes the browser to load the module twice as two different URLs.
+index.html
+├── supabase.js (imported by: main, auth, store, settings)
+├── auth.js (imported by: main)
+├── store.js (imported by: main, calendar, dashboard, employees, customers)
+├── modals.js (imported by: calendar, employees, customers)
+├── calendar.js (imported by: main)
+├── dashboard.js (imported by: main)
+├── employees.js (imported by: main)
+├── customers.js (imported by: main)
+├── settings.js (imported by: main)
+└── main.js (entry point)
+```

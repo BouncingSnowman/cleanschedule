@@ -93,6 +93,14 @@ async function onLoginSuccess() {
         closeMobileMenu();
     };
 
+    // "Oplanerade" sidebar link: switch to schedule AND expand panel
+    document.getElementById('nav-unscheduled')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        window._switchView('schedule');
+        const panel = document.getElementById('unscheduled-panel');
+        if (panel) panel.classList.remove('collapsed');
+    });
+
     navBtns.forEach(btn => {
         btn.addEventListener('click', () => window._switchView(btn.dataset.view));
     });
