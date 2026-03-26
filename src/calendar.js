@@ -6,8 +6,8 @@ import {
     getEmployees, getCustomers, getEmployee, getCustomer,
     getJobOccurrencesForWeek, getUnscheduledJobs, addJob, updateJob, deleteJob,
     EMPLOYEE_COLORS, isEmployeeOffOnDate
-} from './store.js?v=18';
-import { openModal, closeModal } from './modals.js?v=18';
+} from './store.js?v=19';
+import { openModal, closeModal } from './modals.js?v=19';
 
 const DAYS_SV = ['Måndag', 'Tisdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lördag'];
 const MONTHS_SV = ['januari', 'februari', 'mars', 'april', 'maj', 'juni',
@@ -56,6 +56,7 @@ export function initCalendar() {
 
     renderCalendar();
     renderUnscheduledPanel();
+    renderDayTimeline();
 }
 
 export function renderCalendar() {
@@ -272,6 +273,7 @@ export function renderCalendar() {
             }
         });
     });
+    renderDayTimeline();
 }
 
 function showJobForm(existing = null, prefillEmployee = '', prefillDate = '') {
@@ -747,4 +749,104 @@ function escHtml(str) {
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+}
+
+// --- Day Timeline View ---
+let dayTimelineFilter = 'all';
+
+function renderDayTimeline() {
+    const container = document.getElementById('day-timeline');
+    if (!container) return;
+
+    const employees = getEmployees();
+    const today = new Date();
+    const todayStr = formatDate(today);
+    const weekStartStr = formatDate(currentWeekStart);
+    const occurrences = getJobOccurrencesForWeek(weekStartStr);
+    const todayJobs = occurrences.filter(j => j.date === todayStr && j.startTime);
+
+    const START_HOUR = 6;
+    const END_HOUR = 20;
+    const HOUR_HEIGHT = 60; // px per hour
+    const totalHeight = (END_HOUR - START_HOUR) * HOUR_HEIGHT;
+
+    // Filter employees
+    const visibleEmps = dayTimelineFilter === 'all'
+        ? employees
+        : employees.filter(e => e.id === dayTimelineFilter);
+
+    // Day name
+    const dayNames = ['söndag', 'måndag', 'tisdag', 'onsdag', 'torsdag', 'fredag', 'lördag'];
+    const dayLabel = `${dayNames[today.getDay()]} ${today.getDate()} ${MONTHS_SV[today.getMonth()]}`;
+
+    // Employee filter options
+    const filterOpts = `<option value="all">Alla anställda</option>` +
+        employees.map(e => `<option value="${e.id}" ${dayTimelineFilter === e.id ? 'selected' : ''}>${escHtml(e.name)}</option>`).join('');
+
+    let html = `
+        <div class="timeline-header">
+            <h2 class="timeline-title">📅 Idag — ${dayLabel}</h2>
+            <select id="timeline-filter" class="form-input timeline-filter">${filterOpts}</select>
+        </div>
+        <div class="timeline-grid" style="--emp-count: ${visibleEmps.length}">`;
+
+    // Column headers
+    html += '<div class="timeline-corner"></div>';
+    for (const emp of visibleEmps) {
+        const colorObj = EMPLOYEE_COLORS.find(c => c.id === emp.color) || EMPLOYEE_COLORS[0];
+        html += `<div class="timeline-col-header">
+            <span class="emp-color-dot" style="background:${colorObj.color};width:8px;height:8px"></span>
+            ${escHtml(emp.name)}
+        </div>`;
+    }
+
+    // Time column + employee columns
+    html += `<div class="timeline-times" style="height:${totalHeight}px">`;
+    for (let h = START_HOUR; h < END_HOUR; h++) {
+        const top = (h - START_HOUR) * HOUR_HEIGHT;
+        html += `<div class="timeline-hour-label" style="top:${top}px">${String(h).padStart(2, '0')}:00</div>`;
+    }
+    html += '</div>';
+
+    for (const emp of visibleEmps) {
+        const colorObj = EMPLOYEE_COLORS.find(c => c.id === emp.color) || EMPLOYEE_COLORS[0];
+        const empJobs = todayJobs.filter(j => j.employeeId === emp.id);
+
+        html += `<div class="timeline-col" style="height:${totalHeight}px">`;
+        // Hour grid lines
+        for (let h = START_HOUR; h < END_HOUR; h++) {
+            const top = (h - START_HOUR) * HOUR_HEIGHT;
+            html += `<div class="timeline-hour-line" style="top:${top}px"></div>`;
+        }
+
+        // Job blocks
+        for (const job of empJobs) {
+            const [hh, mm] = job.startTime.split(':').map(Number);
+            const startMinutes = hh * 60 + (mm || 0);
+            const durationMinutes = (parseFloat(job.hours) || 1) * 60;
+            const top = ((startMinutes - START_HOUR * 60) / 60) * HOUR_HEIGHT;
+            const height = Math.max((durationMinutes / 60) * HOUR_HEIGHT, 24);
+            const custName = job.customerId ? (getCustomer(job.customerId)?.name || '?') : '?';
+
+            html += `<div class="timeline-job" style="top:${top}px;height:${height}px;border-left:3px solid ${colorObj.color};background:${colorObj.bg}">
+                <span class="timeline-job-name">${escHtml(custName)}</span>
+                <span class="timeline-job-time">${job.startTime} · ${job.hours}h</span>
+            </div>`;
+        }
+        html += '</div>';
+    }
+
+    html += '</div>';
+
+    if (todayJobs.length === 0) {
+        html += '<p style="text-align:center;color:var(--text-muted);padding:20px">Inga jobb med starttid planerade idag.</p>';
+    }
+
+    container.innerHTML = html;
+
+    // Bind filter
+    document.getElementById('timeline-filter')?.addEventListener('change', (e) => {
+        dayTimelineFilter = e.target.value;
+        renderDayTimeline();
+    });
 }
