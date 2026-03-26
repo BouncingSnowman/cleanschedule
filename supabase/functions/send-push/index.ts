@@ -37,45 +37,41 @@ serve(async (req) => {
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
-    // 1. Look up the user by employee email
-    // Find auth user whose email matches the employee
-    const usersRes = await fetch(
-      `${SUPABASE_URL}/auth/v1/admin/users`,
+    console.log(`[send-push] type=${type}, email=${employee_email}`)
+
+    // Use RPC function to get subscriptions (does JOIN with auth.users)
+    const rpcRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/rpc/get_push_subs_for_email`,
       {
+        method: 'POST',
         headers: {
           'apikey': SUPABASE_SERVICE_ROLE_KEY,
           'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          target_email: employee_email,
+          notif_type: type,
+        }),
       }
     )
-    const usersData = await usersRes.json()
-    const matchingUser = usersData.users?.find(
-      (u: any) => u.email?.toLowerCase() === employee_email?.toLowerCase()
-    )
 
-    if (!matchingUser) {
-      return jsonResponse({ ok: false, error: 'No user found for email' }, 404)
+    if (!rpcRes.ok) {
+      const errText = await rpcRes.text()
+      console.error(`[send-push] RPC error: ${rpcRes.status} ${errText}`)
+      return jsonResponse({ ok: false, error: `RPC error: ${rpcRes.status}`, detail: errText }, 500)
     }
 
-    // 2. Get push subscriptions for this user
-    const field = type === 'assigned' ? 'notify_assigned' : 'notify_unscheduled'
-    const subsRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/push_subscriptions?user_id=eq.${matchingUser.id}&${field}=eq.true`,
-      {
-        headers: {
-          'apikey': SUPABASE_SERVICE_ROLE_KEY,
-          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        },
-      }
-    )
-    const subscriptions = await subsRes.json()
+    const subscriptions = await rpcRes.json()
+    console.log(`[send-push] Found ${subscriptions?.length || 0} subscriptions`)
 
     if (!subscriptions?.length) {
-      return jsonResponse({ ok: true, sent: 0, reason: 'No subscriptions' })
+      return jsonResponse({ ok: true, sent: 0, reason: 'No matching subscriptions' })
     }
 
-    // 3. Send push to each subscription
+    // Send push to each subscription
     let sent = 0
+    const errors = []
     for (const sub of subscriptions) {
       try {
         await sendWebPush(
@@ -87,19 +83,21 @@ serve(async (req) => {
           VAPID_PRIVATE_KEY
         )
         sent++
+        console.log(`[send-push] Sent to ${sub.endpoint.slice(0, 50)}...`)
       } catch (e) {
-        console.error('Push send error:', e)
+        console.error(`[send-push] Push send error:`, e.message)
+        errors.push(e.message)
       }
     }
 
-    return jsonResponse({ ok: true, sent })
+    return jsonResponse({ ok: true, sent, total: subscriptions.length, errors })
   } catch (e) {
-    console.error('Error:', e)
+    console.error('[send-push] Error:', e)
     return jsonResponse({ ok: false, error: String(e) }, 500)
   }
 })
 
-function jsonResponse(data: any, status = 200) {
+function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
@@ -111,11 +109,7 @@ function jsonResponse(data: any, status = 200) {
 
 // --- Web Push Implementation (RFC 8291 / RFC 8188) ---
 
-async function sendWebPush(
-  subscription: { endpoint: string; keys: { p256dh: string; auth: string } },
-  payload: string,
-  vapidPrivateKeyB64: string
-) {
+async function sendWebPush(subscription, payload, vapidPrivateKeyB64) {
   // Generate VAPID JWT
   const vapidHeaders = await generateVapidHeaders(
     subscription.endpoint,
@@ -148,7 +142,7 @@ async function sendWebPush(
   }
 }
 
-async function generateVapidHeaders(endpoint: string, privateKeyB64: string) {
+async function generateVapidHeaders(endpoint, privateKeyB64) {
   const audience = new URL(endpoint).origin
   const now = Math.floor(Date.now() / 1000)
 
@@ -163,11 +157,21 @@ async function generateVapidHeaders(endpoint: string, privateKeyB64: string) {
   const claimsB64 = b64urlEncode(new TextEncoder().encode(JSON.stringify(claims)))
   const unsignedToken = `${headerB64}.${claimsB64}`
 
-  // Import private key
-  const privateKeyBytes = b64urlDecode(privateKeyB64)
+  // Extract x,y from VAPID public key (uncompressed: 0x04 + x(32) + y(32))
+  const pubKeyBytes = b64urlDecode(VAPID_PUBLIC_KEY)
+  const x = b64urlEncode(pubKeyBytes.slice(1, 33))
+  const y = b64urlEncode(pubKeyBytes.slice(33, 65))
+
+  // Import private key using JWK (much more reliable than PKCS8 in Deno)
   const keyData = await crypto.subtle.importKey(
-    'pkcs8',
-    buildPkcs8(privateKeyBytes),
+    'jwk',
+    {
+      kty: 'EC',
+      crv: 'P-256',
+      d: privateKeyB64,
+      x: x,
+      y: y,
+    },
     { name: 'ECDSA', namedCurve: 'P-256' },
     false,
     ['sign']
@@ -179,9 +183,8 @@ async function generateVapidHeaders(endpoint: string, privateKeyB64: string) {
     new TextEncoder().encode(unsignedToken)
   )
 
-  // Convert DER signature to raw r||s format
-  const rawSig = derToRaw(new Uint8Array(signature))
-  const sigB64 = b64urlEncode(rawSig)
+  // Deno returns raw r||s (64 bytes) for ECDSA, not DER
+  const sigB64 = b64urlEncode(new Uint8Array(signature))
   const jwt = `${unsignedToken}.${sigB64}`
 
   return {
@@ -189,11 +192,7 @@ async function generateVapidHeaders(endpoint: string, privateKeyB64: string) {
   }
 }
 
-async function encryptPayload(
-  payload: string,
-  clientPubB64: string,
-  clientAuthB64: string
-) {
+async function encryptPayload(payload, clientPubB64, clientAuthB64) {
   const clientPubKey = b64urlDecode(clientPubB64)
   const clientAuth = b64urlDecode(clientAuthB64)
 
@@ -282,13 +281,13 @@ async function encryptPayload(
 
 // --- Crypto Helpers ---
 
-function b64urlEncode(bytes: Uint8Array): string {
+function b64urlEncode(bytes) {
   let binary = ''
   for (const b of bytes) binary += String.fromCharCode(b)
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }
 
-function b64urlDecode(str: string): Uint8Array {
+function b64urlDecode(str) {
   const base64 = str.replace(/-/g, '+').replace(/_/g, '/') + '=='.slice(0, (4 - str.length % 4) % 4)
   const binary = atob(base64)
   const bytes = new Uint8Array(binary.length)
@@ -296,7 +295,7 @@ function b64urlDecode(str: string): Uint8Array {
   return bytes
 }
 
-function concatBytes(...arrays: Uint8Array[]): Uint8Array {
+function concatBytes(...arrays) {
   const total = arrays.reduce((s, a) => s + a.length, 0)
   const result = new Uint8Array(total)
   let offset = 0
@@ -304,14 +303,14 @@ function concatBytes(...arrays: Uint8Array[]): Uint8Array {
   return result
 }
 
-async function hkdfExtract(salt: Uint8Array, ikm: Uint8Array): Promise<Uint8Array> {
+async function hkdfExtract(salt, ikm) {
   const key = await crypto.subtle.importKey(
     'raw', salt, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
   )
   return new Uint8Array(await crypto.subtle.sign('HMAC', key, ikm))
 }
 
-async function hkdfExpand(prk: Uint8Array, info: Uint8Array, length: number): Promise<Uint8Array> {
+async function hkdfExpand(prk, info, length) {
   const key = await crypto.subtle.importKey(
     'raw', prk, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
   )
@@ -320,36 +319,3 @@ async function hkdfExpand(prk: Uint8Array, info: Uint8Array, length: number): Pr
   return okm.slice(0, length)
 }
 
-// Build PKCS8 wrapper for a raw 32-byte EC private key
-function buildPkcs8(rawKey: Uint8Array): Uint8Array {
-  // PKCS8 prefix for P-256 ECDSA key
-  const prefix = new Uint8Array([
-    0x30, 0x41, 0x02, 0x01, 0x00, 0x30, 0x13, 0x06,
-    0x07, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x02, 0x01,
-    0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03,
-    0x01, 0x07, 0x04, 0x27, 0x30, 0x25, 0x02, 0x01,
-    0x01, 0x04, 0x20,
-  ])
-  return concatBytes(prefix, rawKey)
-}
-
-// Convert DER-encoded ECDSA signature to raw r||s (64 bytes)
-function derToRaw(der: Uint8Array): Uint8Array {
-  // DER: 0x30 <len> 0x02 <rlen> <r> 0x02 <slen> <s>
-  let offset = 2 // skip 0x30 <len>
-  // Read r
-  offset++ // skip 0x02
-  const rLen = der[offset++]
-  const r = der.slice(offset, offset + rLen)
-  offset += rLen
-  // Read s
-  offset++ // skip 0x02
-  const sLen = der[offset++]
-  const s = der.slice(offset, offset + sLen)
-
-  // Pad/trim to 32 bytes each
-  const raw = new Uint8Array(64)
-  raw.set(r.length > 32 ? r.slice(r.length - 32) : r, 32 - Math.min(r.length, 32))
-  raw.set(s.length > 32 ? s.slice(s.length - 32) : s, 64 - Math.min(s.length, 32))
-  return raw
-}
