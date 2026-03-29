@@ -5,7 +5,7 @@
 import {
     getEmployees, getCustomers, getJobs, getUnscheduledJobs,
     getJobOccurrencesForWeek, EMPLOYEE_COLORS, toLocalDateStr
-} from './store.js?v=33';
+} from './store.js?v=34';
 
 function parseHours(val) {
     if (!val && val !== 0) return 0;
@@ -58,10 +58,10 @@ export function renderDashboard() {
     }).filter(e => e.hasTarget || e.hoursBooked > 0);
 
     // Weekly distribution (jobs per day)
-    const dayNames = ['Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör'];
+    const dayNames = ['Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön'];
     const dayJobCounts = [];
     const dayHoursCounts = [];
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 7; i++) {
         const d = new Date(weekStart);
         d.setDate(d.getDate() + i);
         const ds = toLocalDateStr(d);

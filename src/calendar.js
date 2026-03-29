@@ -6,8 +6,8 @@ import {
     getEmployees, getCustomers, getEmployee, getCustomer,
     getJobOccurrencesForWeek, getUnscheduledJobs, addJob, updateJob, deleteJob,
     EMPLOYEE_COLORS, isEmployeeOffOnDate
-} from './store.js?v=33';
-import { openModal, closeModal } from './modals.js?v=33';
+} from './store.js?v=34';
+import { openModal, closeModal } from './modals.js?v=34';
 
 /** Parse a numeric hours value that may use comma as decimal separator */
 function parseHours(val) {
@@ -23,7 +23,7 @@ function fmtHours(val) {
     return s.replace('.', ',');
 }
 
-const DAYS_SV = ['Måndag', 'Tisdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lördag'];
+const DAYS_SV = ['Måndag', 'Tisdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lördag', 'Söndag'];
 const MONTHS_SV = ['januari', 'februari', 'mars', 'april', 'maj', 'juni',
     'juli', 'augusti', 'september', 'oktober', 'november', 'december'];
 
@@ -85,7 +85,7 @@ export function renderCalendar() {
 
     // Get dates for each day column
     const dayDates = [];
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 7; i++) {
         const d = new Date(currentWeekStart);
         d.setDate(d.getDate() + i);
         dayDates.push(d);
@@ -107,7 +107,7 @@ export function renderCalendar() {
     // Header row
     html += '<div class="grid-header">';
     html += '<div class="grid-header-cell">Anställd</div>';
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 7; i++) {
         const d = dayDates[i];
         const isToday = d.getTime() === today.getTime();
         html += `<div class="grid-header-cell ${isToday ? 'today' : ''}">
@@ -138,7 +138,7 @@ export function renderCalendar() {
         </div>`;
 
         // Day cells
-        for (let i = 0; i < 6; i++) {
+        for (let i = 0; i < 7; i++) {
             const d = dayDates[i];
             const dateStr = formatDate(d);
             const isToday = d.getTime() === today.getTime();
@@ -718,7 +718,7 @@ function updateWeekTitle() {
     const weekNum = getWeekNumber(currentWeekStart);
 
     const endDate = new Date(currentWeekStart);
-    endDate.setDate(endDate.getDate() + 5); // Saturday
+    endDate.setDate(endDate.getDate() + 6); // Sunday
 
     const startMonth = MONTHS_SV[currentWeekStart.getMonth()];
     const endMonth = MONTHS_SV[endDate.getMonth()];
