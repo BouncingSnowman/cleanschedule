@@ -5,7 +5,18 @@
 import {
     getEmployees, getCustomers, getJobs, getUnscheduledJobs,
     getJobOccurrencesForWeek, EMPLOYEE_COLORS, toLocalDateStr
-} from './store.js?v=32';
+} from './store.js?v=33';
+
+function parseHours(val) {
+    if (!val && val !== 0) return 0;
+    return parseFloat(String(val).replace(',', '.')) || 0;
+}
+
+function fmtHours(val) {
+    const n = typeof val === 'number' ? val : parseHours(val);
+    const s = String(parseFloat(n.toFixed(2)));
+    return s.replace('.', ',');
+}
 
 export function initDashboard() {
     // Dashboard re-renders when navigated to
@@ -31,7 +42,7 @@ export function renderDashboard() {
 
     // --- Stats ---
     const totalJobsThisWeek = occurrences.length;
-    const totalHoursThisWeek = occurrences.reduce((sum, j) => sum + (parseFloat(j.hours) || 0), 0);
+    const totalHoursThisWeek = occurrences.reduce((sum, j) => sum + parseHours(j.hours), 0);
     const activeEmployees = employees.length;
     const totalCustomers = customers.length;
 
@@ -39,9 +50,9 @@ export function renderDashboard() {
     const empStats = employees.map(emp => {
         const colorObj = EMPLOYEE_COLORS.find(c => c.id === emp.color) || EMPLOYEE_COLORS[0];
         const empJobs = occurrences.filter(j => j.employeeId === emp.id);
-        const hoursBooked = empJobs.reduce((sum, j) => sum + (parseFloat(j.hours) || 0), 0);
-        const hasTarget = emp.type !== 'contractor' || parseFloat(emp.defaultHours) > 0;
-        const target = hasTarget ? (parseFloat(emp.defaultHours) || 40) : 0;
+        const hoursBooked = empJobs.reduce((sum, j) => sum + parseHours(j.hours), 0);
+        const hasTarget = emp.type !== 'contractor' || parseHours(emp.defaultHours) > 0;
+        const target = hasTarget ? (parseHours(emp.defaultHours) || 40) : 0;
         const pct = hasTarget ? Math.min(Math.round((hoursBooked / target) * 100), 100) : 0;
         return { ...emp, hoursBooked, target, pct, hasTarget, jobCount: empJobs.length, colorObj };
     }).filter(e => e.hasTarget || e.hoursBooked > 0);
@@ -56,7 +67,7 @@ export function renderDashboard() {
         const ds = toLocalDateStr(d);
         const dayJobs = occurrences.filter(j => j.occurrenceDate === ds);
         dayJobCounts.push(dayJobs.length);
-        dayHoursCounts.push(dayJobs.reduce((s, j) => s + (parseFloat(j.hours) || 0), 0));
+        dayHoursCounts.push(dayJobs.reduce((s, j) => s + parseHours(j.hours), 0));
     }
 
     // Today's jobs
@@ -75,7 +86,7 @@ export function renderDashboard() {
     }).sort((a, b) => b.count - a.count);
 
     // Avg hours per job
-    const avgHours = totalJobsThisWeek > 0 ? (totalHoursThisWeek / totalJobsThisWeek).toFixed(1) : '0';
+    const avgHours = totalJobsThisWeek > 0 ? (totalHoursThisWeek / totalJobsThisWeek).toFixed(1).replace('.', ',') : '0';
 
     // --- BUILD HTML ---
     const todayFormatted = formatSwedishDate(now);
@@ -97,7 +108,7 @@ export function renderDashboard() {
             <div class="stat-card clickable" data-navigate="schedule">
                 <div class="stat-icon" style="background: rgba(16,185,129,0.1); color: var(--success)">⏱</div>
                 <div class="stat-content">
-                    <div class="stat-value">${totalHoursThisWeek}h</div>
+                    <div class="stat-value">${fmtHours(totalHoursThisWeek)}h</div>
                     <div class="stat-label">Timmar bokat denna vecka</div>
                 </div>
             </div>
@@ -149,7 +160,7 @@ export function renderDashboard() {
                         <div class="util-info">
                             <span class="emp-color-dot" style="background: ${e.colorObj.color}"></span>
                             <span class="util-name">${escHtml(e.name)}</span>
-                            <span class="util-hours" style="${hoursStyle}">${e.hoursBooked}h${e.hasTarget ? ` / ${e.target}h` : ''}</span>
+                            <span class="util-hours" style="${hoursStyle}">${fmtHours(e.hoursBooked)}h${e.hasTarget ? ` / ${fmtHours(e.target)}h` : ''}</span>
                         </div>
                         ${e.hasTarget ? `
                         <div class="util-bar-bg">
@@ -173,7 +184,7 @@ export function renderDashboard() {
                         <div class="today-job" style="border-left: 3px solid ${empColor.color}; background: ${empColor.bg}">
                             <div class="today-job-customer">${escHtml(custName)}</div>
                             <div class="today-job-meta">
-                                ${emp ? escHtml(emp.name) : '—'} · ${j.startTime || ''} · ${j.hours || '?'}h
+                                ${emp ? escHtml(emp.name) : '—'} · ${j.startTime || ''} · ${j.hours ? fmtHours(j.hours) : '?'}h
                             </div>
                         </div>
                     `;
@@ -221,7 +232,7 @@ function renderBarChart(labels, values, unit) {
                 <animate attributeName="height" from="0" to="${barH}" dur="0.5s" fill="freeze"/>
                 <animate attributeName="y" from="${chartHeight - bottomPad}" to="${y}" dur="0.5s" fill="freeze"/>
             </rect>
-            <text x="${x + barWidth / 2}" y="${y - 6}" text-anchor="middle" font-size="11" font-weight="600" fill="var(--text-secondary)">${v}${unit}</text>
+            <text x="${x + barWidth / 2}" y="${y - 6}" text-anchor="middle" font-size="11" font-weight="600" fill="var(--text-secondary)">${fmtHours(v)}${unit}</text>
             <text x="${x + barWidth / 2}" y="${chartHeight - 6}" text-anchor="middle" font-size="11" fill="var(--text-muted)">${label}</text>
         `;
     }).join('');

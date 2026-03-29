@@ -6,8 +6,22 @@ import {
     getEmployees, getCustomers, getEmployee, getCustomer,
     getJobOccurrencesForWeek, getUnscheduledJobs, addJob, updateJob, deleteJob,
     EMPLOYEE_COLORS, isEmployeeOffOnDate
-} from './store.js?v=32';
-import { openModal, closeModal } from './modals.js?v=32';
+} from './store.js?v=33';
+import { openModal, closeModal } from './modals.js?v=33';
+
+/** Parse a numeric hours value that may use comma as decimal separator */
+function parseHours(val) {
+    if (!val && val !== 0) return 0;
+    return parseFloat(String(val).replace(',', '.')) || 0;
+}
+
+/** Format a numeric hours value for display, using comma as decimal separator (Swedish) */
+function fmtHours(val) {
+    const n = typeof val === 'number' ? val : parseHours(val);
+    // Avoid trailing zeros: 2.5 → "2,5", 3.0 → "3"
+    const s = String(parseFloat(n.toFixed(2)));
+    return s.replace('.', ',');
+}
 
 const DAYS_SV = ['Måndag', 'Tisdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lördag'];
 const MONTHS_SV = ['januari', 'februari', 'mars', 'april', 'maj', 'juni',
@@ -109,7 +123,7 @@ export function renderCalendar() {
 
         // Calculate weekly hours for this employee
         const empJobs = occurrences.filter(j => j.employeeId === emp.id);
-        const weeklyHours = empJobs.reduce((sum, j) => sum + (parseFloat(j.hours) || 0), 0);
+        const weeklyHours = empJobs.reduce((sum, j) => sum + parseHours(j.hours), 0);
 
         html += '<div class="grid-row">';
 
@@ -119,7 +133,7 @@ export function renderCalendar() {
             <div class="emp-info">
                 <span class="emp-name">${escHtml(emp.name)}</span>
                 <span class="emp-type">${emp.type === 'fulltime' ? 'Heltid' : 'Tim'}</span>
-                <span class="emp-hours">${weeklyHours}h${emp.defaultHours ? ' / ' + emp.defaultHours + 'h' : ''}</span>
+                <span class="emp-hours">${fmtHours(weeklyHours)}h${emp.defaultHours ? ' / ' + fmtHours(emp.defaultHours) + 'h' : ''}</span>
             </div>
         </div>`;
 
@@ -145,10 +159,10 @@ export function renderCalendar() {
                 html += `<div class="job-block" 
                               style="background: ${colorObj.bg}; border-color: ${colorObj.color}"
                               data-job-id="${job.id}"
-                              title="${escHtml(custName)}${job.hours ? ' — ' + job.hours + 'h' : ''}">
+                              title="${escHtml(custName)}${job.hours ? ' — ' + fmtHours(job.hours) + 'h' : ''}">
                     <div class="job-customer">${escHtml(custName)}</div>
                     <div class="job-time">
-                        ${job.startTime || ''}${job.hours ? ' · ' + job.hours + 'h' : ''}
+                        ${job.startTime || ''}${job.hours ? ' · ' + fmtHours(job.hours) + 'h' : ''}
                         ${job.isRecurring ? '<span class="recurring-badge">🔄</span>' : ''}
                     </div>
                 </div>`;
@@ -327,7 +341,7 @@ function showJobForm(existing = null, prefillEmployee = '', prefillDate = '') {
             <div class="form-row">
                 <div class="form-group">
                     <label for="job-hours">Antal timmar</label>
-                    <input type="number" id="job-hours" class="form-input" placeholder="3" step="0.5" min="0.5" value="${existing?.hours || ''}">
+                    <input type="text" inputmode="decimal" id="job-hours" class="form-input" placeholder="2,5" value="${existing?.hours ? fmtHours(existing.hours) : ''}">
                 </div>
                 <div class="form-group">
                     <label for="job-recurring">Återkommande</label>
@@ -358,13 +372,13 @@ function showJobForm(existing = null, prefillEmployee = '', prefillDate = '') {
     custSelect.addEventListener('change', () => {
         if (!hoursInput.value) {
             const cust = customers.find(c => c.id === custSelect.value);
-            if (cust?.estimatedHours) hoursInput.value = cust.estimatedHours;
+            if (cust?.estimatedHours) hoursInput.value = fmtHours(cust.estimatedHours);
         }
     });
     // Trigger once on open if no hours set
     if (!existing && !hoursInput.value) {
         const cust = customers.find(c => c.id === custSelect.value);
-        if (cust?.estimatedHours) hoursInput.value = cust.estimatedHours;
+        if (cust?.estimatedHours) hoursInput.value = fmtHours(cust.estimatedHours);
     }
 
     document.getElementById('modal-cancel').addEventListener('click', closeModal);
@@ -385,7 +399,7 @@ function showJobForm(existing = null, prefillEmployee = '', prefillDate = '') {
             customerId: document.getElementById('job-customer').value,
             date: document.getElementById('job-date').value,
             startTime: document.getElementById('job-start').value,
-            hours: document.getElementById('job-hours').value,
+            hours: document.getElementById('job-hours').value.replace(',', '.'),
             recurring: document.getElementById('job-recurring').value,
             notes: document.getElementById('job-notes').value.trim(),
         };
@@ -452,7 +466,7 @@ export function renderUnscheduledPanel(filter = '') {
         const cust = getCustomer(job.customerId);
         const custName = cust ? cust.name : 'Okänd kund';
         const custAddr = cust?.address || '';
-        const hours = job.hours || '?';
+        const hours = job.hours ? fmtHours(job.hours) : '?';
 
         return `
             <div class="unscheduled-card" data-job-id="${job.id}">
@@ -604,7 +618,7 @@ function showUnscheduledForm() {
             </div>
             <div class="form-group">
                     <label for="unsched-hours">Antal timmar</label>
-                    <input type="number" id="unsched-hours" class="form-input" placeholder="3" step="0.5" min="0.5">
+                    <input type="text" inputmode="decimal" id="unsched-hours" class="form-input" placeholder="2,5">
                 </div>
             <div class="form-group">
                 <label for="unsched-notes">Anteckningar</label>
@@ -622,17 +636,17 @@ function showUnscheduledForm() {
     const hoursInput = document.getElementById('unsched-hours');
     custSelect.addEventListener('change', () => {
         const cust = customers.find(c => c.id === custSelect.value);
-        if (cust?.estimatedHours && !hoursInput.value) hoursInput.value = cust.estimatedHours;
+        if (cust?.estimatedHours && !hoursInput.value) hoursInput.value = fmtHours(cust.estimatedHours);
     });
     // Trigger on open
     const firstCust = customers.find(c => c.id === custSelect.value);
-    if (firstCust?.estimatedHours) hoursInput.value = firstCust.estimatedHours;
+    if (firstCust?.estimatedHours) hoursInput.value = fmtHours(firstCust.estimatedHours);
 
     document.getElementById('modal-cancel').addEventListener('click', closeModal);
     document.getElementById('modal-save').addEventListener('click', async () => {
         const jobData = {
             customerId: custSelect.value,
-            hours: hoursInput.value,
+            hours: hoursInput.value.replace(',', '.'),
             startTime: '',
             notes: document.getElementById('unsched-notes').value.trim(),
             employeeId: '',  // Unassigned!
@@ -665,7 +679,7 @@ function showEditUnscheduledForm(jobId) {
             </div>
             <div class="form-group">
                 <label for="edit-unsched-hours">Antal timmar</label>
-                <input type="number" id="edit-unsched-hours" class="form-input" value="${job.hours || ''}" step="0.5" min="0.5">
+                <input type="text" inputmode="decimal" id="edit-unsched-hours" class="form-input" value="${job.hours ? fmtHours(job.hours) : ''}">
             </div>
             <div class="form-group">
                 <label for="edit-unsched-notes">Anteckningar</label>
@@ -691,7 +705,7 @@ function showEditUnscheduledForm(jobId) {
     document.getElementById('modal-save').addEventListener('click', async () => {
         await updateJob(jobId, {
             customerId: document.getElementById('edit-unsched-customer').value,
-            hours: document.getElementById('edit-unsched-hours').value,
+            hours: document.getElementById('edit-unsched-hours').value.replace(',', '.'),
             notes: document.getElementById('edit-unsched-notes').value.trim(),
         });
         closeModal();
@@ -823,7 +837,7 @@ function renderDayTimeline() {
         for (const job of empJobs) {
             const [hh, mm] = job.startTime.split(':').map(Number);
             const startMinutes = hh * 60 + (mm || 0);
-            const durationMinutes = (parseFloat(job.hours) || 1) * 60;
+            const durationMinutes = (parseHours(job.hours) || 1) * 60;
             const top = ((startMinutes - START_HOUR * 60) / 60) * HOUR_HEIGHT;
             const height = Math.max((durationMinutes / 60) * HOUR_HEIGHT, 24);
             const custName = job.customerId ? (getCustomer(job.customerId)?.name || '?') : '?';

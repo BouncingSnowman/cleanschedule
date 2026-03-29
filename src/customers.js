@@ -2,8 +2,8 @@
  * CleanSchedule — Customer Management UI
  */
 
-import { getCustomers, addCustomer, updateCustomer, deleteCustomer, getJobs, getEmployees, EMPLOYEE_COLORS } from './store.js?v=32';
-import { openModal, closeModal } from './modals.js?v=32';
+import { getCustomers, addCustomer, updateCustomer, deleteCustomer, getJobs, getEmployees, EMPLOYEE_COLORS } from './store.js?v=33';
+import { openModal, closeModal } from './modals.js?v=33';
 
 let onChangeCallback = null;
 
@@ -50,8 +50,8 @@ export function renderCustomers(filter = '') {
                     const colorObj = emp ? (EMPLOYEE_COLORS.find(c => c.id === emp.color) || EMPLOYEE_COLORS[0]) : null;
                     const empName = emp ? escHtml(emp.name) : '<span style="color:var(--text-muted)">Ej tilldelad</span>';
                     const schedule = j.recurring
-                        ? `🔄 Återkommande · ${j.hours || '?'}h`
-                        : `${j.date || '?'} · ${j.hours || '?'}h`;
+                        ? `🔄 Återkommande · ${(j.hours || '?').toString().replace('.', ',')}h`
+                        : `${j.date || '?'} · ${(j.hours || '?').toString().replace('.', ',')}h`;
                     return `
                         <div class="card-job-item">
                             ${colorObj ? `<span class="emp-color-dot" style="background:${colorObj.color};width:8px;height:8px"></span>` : ''}
@@ -143,7 +143,7 @@ function showCustomerForm(existing = null) {
             </div>
             <div class="form-group">
                 <label for="cust-est-hours">Uppskattat antal timmar</label>
-                <input type="number" id="cust-est-hours" class="form-input" placeholder="3" step="0.5" min="0.5" value="${existing?.estimatedHours || ''}">
+                <input type="text" inputmode="decimal" id="cust-est-hours" class="form-input" placeholder="2,5" value="${existing?.estimatedHours ? String(existing.estimatedHours).replace('.', ',') : ''}">
             </div>
         `,
         footer: `
@@ -166,7 +166,7 @@ function showCustomerForm(existing = null) {
             phone: document.getElementById('cust-phone').value.trim(),
             email: document.getElementById('cust-email').value.trim(),
             notes: document.getElementById('cust-notes').value.trim(),
-            estimatedHours: document.getElementById('cust-est-hours').value || '',
+            estimatedHours: document.getElementById('cust-est-hours').value.replace(',', '.') || '',
         };
 
         try {

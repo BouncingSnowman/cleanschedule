@@ -2,8 +2,8 @@
  * CleanSchedule — Employee Management UI
  */
 
-import { getEmployees, addEmployee, updateEmployee, deleteEmployee, EMPLOYEE_COLORS, getTimeOffForEmployee, addTimeOff, deleteTimeOff, toLocalDateStr } from './store.js?v=32';
-import { openModal, closeModal } from './modals.js?v=32';
+import { getEmployees, addEmployee, updateEmployee, deleteEmployee, EMPLOYEE_COLORS, getTimeOffForEmployee, addTimeOff, deleteTimeOff, toLocalDateStr } from './store.js?v=33';
+import { openModal, closeModal } from './modals.js?v=33';
 
 let onChangeCallback = null;
 
@@ -54,7 +54,7 @@ export function renderEmployees() {
                 ${emp.defaultHours ? `
                 <div class="card-detail">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                    ${escHtml(emp.defaultHours)} tim/vecka
+                    ${escHtml(String(emp.defaultHours).replace('.', ','))} tim/vecka
                 </div>` : ''}
                 ${emp.notes ? `
                 <div class="card-detail" style="font-style:italic;color:var(--text-secondary)">
@@ -125,7 +125,7 @@ function showEmployeeForm(existing = null) {
                 </div>
                 <div class="form-group" id="emp-hours-group" style="${existing?.type === 'contractor' ? 'display:none' : ''}">
                     <label for="emp-hours">Tim/vecka</label>
-                    <input type="number" id="emp-hours" class="form-input" placeholder="40" value="${existing?.defaultHours || ''}">
+                    <input type="text" inputmode="decimal" id="emp-hours" class="form-input" placeholder="40" value="${existing?.defaultHours ? String(existing.defaultHours).replace('.', ',') : ''}">
                 </div>
             </div>
             <div class="form-row">
@@ -187,7 +187,7 @@ function showEmployeeForm(existing = null) {
         const empData = {
             name,
             type: document.getElementById('emp-type').value,
-            defaultHours: document.getElementById('emp-type').value === 'contractor' ? '' : (document.getElementById('emp-hours').value || ''),
+            defaultHours: document.getElementById('emp-type').value === 'contractor' ? '' : (document.getElementById('emp-hours').value.replace(',', '.') || ''),
             phone: document.getElementById('emp-phone').value.trim(),
             email: document.getElementById('emp-email').value.trim(),
             color: chosenColor,
