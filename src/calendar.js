@@ -6,8 +6,8 @@ import {
     getEmployees, getCustomers, getEmployee, getCustomer,
     getJobOccurrencesForWeek, getUnscheduledJobs, addJob, updateJob, deleteJob,
     EMPLOYEE_COLORS, isEmployeeOffOnDate
-} from './store.js?v=34';
-import { openModal, closeModal } from './modals.js?v=34';
+} from './store.js?v=35';
+import { openModal, closeModal } from './modals.js?v=35';
 
 /** Parse a numeric hours value that may use comma as decimal separator */
 function parseHours(val) {
@@ -163,7 +163,7 @@ export function renderCalendar() {
                     <div class="job-customer">${escHtml(custName)}</div>
                     <div class="job-time">
                         ${job.startTime || ''}${job.hours ? ' · ' + fmtHours(job.hours) + 'h' : ''}
-                        ${job.isRecurring ? '<span class="recurring-badge">🔄</span>' : ''}
+                        ${(job.isRecurring || (job.recurring && job.recurring !== 'none')) ? '<span class="recurring-badge">🔄</span>' : ''}
                     </div>
                 </div>`;
             }
