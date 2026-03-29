@@ -2,15 +2,15 @@
  * CleanSchedule — Main Entry Point (with Auth)
  */
 
-import { restoreSession, isLoggedIn, signOut, handleOAuthCallback, getUser } from './supabase.js?v=35';
-import { initAuth, renderAuthView } from './auth.js?v=35';
-import { loadAllData, getUnscheduledJobs } from './store.js?v=35';
-import { initCalendar, renderCalendar, renderUnscheduledPanel } from './calendar.js?v=35';
-import { initEmployees, renderEmployees } from './employees.js?v=35';
-import { initCustomers, renderCustomers } from './customers.js?v=35';
-import { initDashboard, renderDashboard } from './dashboard.js?v=35';
-import { initSettings, renderSettings } from './settings.js?v=35';
-import { exportData, importData, importCustomersFromCsv } from './store.js?v=35';
+import { restoreSession, isLoggedIn, signOut, handleOAuthCallback, getUser } from './supabase.js?v=36';
+import { initAuth, renderAuthView } from './auth.js?v=36';
+import { loadAllData, getUnscheduledJobs } from './store.js?v=36';
+import { initCalendar, renderCalendar, renderUnscheduledPanel } from './calendar.js?v=36';
+import { initEmployees, renderEmployees } from './employees.js?v=36';
+import { initCustomers, renderCustomers } from './customers.js?v=36';
+import { initDashboard, renderDashboard } from './dashboard.js?v=36';
+import { initSettings, renderSettings } from './settings.js?v=36';
+import { exportData, importData, importCustomersFromCsv } from './store.js?v=36';
 
 document.addEventListener('DOMContentLoaded', async () => {
     initAuth(onLoginSuccess);

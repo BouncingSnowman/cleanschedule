@@ -6,8 +6,8 @@ import {
     getEmployees, getCustomers, getEmployee, getCustomer,
     getJobOccurrencesForWeek, getUnscheduledJobs, addJob, updateJob, deleteJob,
     EMPLOYEE_COLORS, isEmployeeOffOnDate
-} from './store.js?v=35';
-import { openModal, closeModal } from './modals.js?v=35';
+} from './store.js?v=36';
+import { openModal, closeModal } from './modals.js?v=36';
 
 /** Parse a numeric hours value that may use comma as decimal separator */
 function parseHours(val) {
@@ -799,7 +799,7 @@ function renderDayTimeline() {
 
     let html = `
         <div class="timeline-header">
-            <h2 class="timeline-title">📅 Idag — ${dayLabel}</h2>
+            <h2 class="timeline-title">📅 Idag<br><span style="font-weight:400;font-size:0.85em">${dayLabel}</span></h2>
             <select id="timeline-filter" class="form-input timeline-filter">${filterOpts}</select>
         </div>
         <div class="timeline-grid" style="--emp-count: ${visibleEmps.length}">`;
