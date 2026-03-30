@@ -2,10 +2,10 @@
  * Veckoplan — Settings (Notification Preferences)
  */
 
-import { getUser } from './supabase.js?v=36';
+import { getUser } from './supabase.js?v=38';
 import {
     dbGetSubscription, dbUpsertSubscription, dbUpdateSubscriptionPrefs
-} from './supabase.js?v=36';
+} from './supabase.js?v=38';
 
 const VAPID_PUBLIC_KEY = 'BJC_-JfmMRGUnnkfibR52IGARups1q-t-jOGLee8FoA8G_oHH-v9QNf3PrqGrmz_gVWCLAzwSZN8A1gd72q4E_c';
 
@@ -87,9 +87,37 @@ export async function renderSettings() {
                 </div>
             `}
         </div>
+
+        <div class="settings-section" style="margin-top: 24px">
+            <h2 class="settings-title">📅 Kalender</h2>
+            <div class="settings-card">
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <div class="setting-label">⏰ Påminnelse vid export</div>
+                        <div class="setting-desc">Lägg till en påminnelse i kalenderhändelser när du exporterar veckoschema</div>
+                    </div>
+                    <select id="select-reminder" class="form-select-sm">
+                        <option value="0">Ingen</option>
+                        <option value="30">30 min före</option>
+                        <option value="60">1 timme före</option>
+                        <option value="120">2 timmar före</option>
+                    </select>
+                </div>
+            </div>
+        </div>
     `;
 
-    // --- Event handlers ---
+    // --- Calendar Reminder handler (always available, independent of push) ---
+    const reminderSelect = document.getElementById('select-reminder');
+    if (reminderSelect) {
+        const saved = localStorage.getItem('cs_reminder_minutes') || '0';
+        reminderSelect.value = saved;
+        reminderSelect.addEventListener('change', () => {
+            localStorage.setItem('cs_reminder_minutes', reminderSelect.value);
+        });
+    }
+
+    // --- Push Notification Event handlers ---
     if (!pushSupported) return;
 
     const pushToggle = document.getElementById('toggle-push');

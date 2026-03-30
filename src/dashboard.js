@@ -5,7 +5,7 @@
 import {
     getEmployees, getCustomers, getJobs, getUnscheduledJobs,
     getJobOccurrencesForWeek, EMPLOYEE_COLORS, toLocalDateStr
-} from './store.js?v=36';
+} from './store.js?v=38';
 
 function parseHours(val) {
     if (!val && val !== 0) return 0;
@@ -56,6 +56,9 @@ export function renderDashboard() {
         const pct = hasTarget ? Math.min(Math.round((hoursBooked / target) * 100), 100) : 0;
         return { ...emp, hoursBooked, target, pct, hasTarget, jobCount: empJobs.length, colorObj };
     }).filter(e => e.hasTarget || e.hoursBooked > 0);
+
+    // Find max hours among employees without targets (for proportional bar sizing)
+    const maxHoursNoTarget = Math.max(...empStats.filter(e => !e.hasTarget).map(e => e.hoursBooked), 1);
 
     // Weekly distribution (jobs per day)
     const dayNames = ['Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön'];
@@ -155,6 +158,10 @@ export function renderDashboard() {
                     const isOver = e.hasTarget && e.hoursBooked > e.target;
                     const barColor = isOver ? '#ef4444' : e.colorObj.color;
                     const hoursStyle = isOver ? 'color:#ef4444;font-weight:600' : '';
+                    // For hourly employees: proportional bar relative to peers
+                    const barPct = e.hasTarget
+                        ? Math.min(e.pct, 100)
+                        : Math.min(Math.round((e.hoursBooked / maxHoursNoTarget) * 100), 100);
                     return `
                     <div class="utilization-row">
                         <div class="util-info">
@@ -162,12 +169,10 @@ export function renderDashboard() {
                             <span class="util-name">${escHtml(e.name)}</span>
                             <span class="util-hours" style="${hoursStyle}">${fmtHours(e.hoursBooked)}h${e.hasTarget ? ` / ${fmtHours(e.target)}h` : ''}</span>
                         </div>
-                        ${e.hasTarget ? `
                         <div class="util-bar-bg">
-                            <div class="util-bar-fill" style="width: ${Math.min(e.pct, 100)}%; background: ${barColor}"></div>
+                            <div class="util-bar-fill" style="width: ${barPct}%; background: ${barColor}"></div>
                         </div>
-                        <span class="util-pct" style="${isOver ? 'color:#ef4444;font-weight:600' : ''}">${e.pct}%</span>
-                        ` : ''}
+                        ${e.hasTarget ? `<span class="util-pct" style="${isOver ? 'color:#ef4444;font-weight:600' : ''}">${e.pct}%</span>` : ''}
                     </div>
                 `;}).join('')}
             </div>

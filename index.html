@@ -12,7 +12,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=36">
+    <link rel="stylesheet" href="css/style.css?v=38">
 </head>
 <body>
     <div id="app">
@@ -141,6 +141,10 @@
                         <button id="btn-fullscreen" class="btn-icon" title="Helskärm">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
                         </button>
+                        <button id="btn-export-week" class="btn-secondary btn-export-cal" title="Exportera vecka till kalender">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M9 16l2 2 4-4"/></svg>
+                            <span class="btn-export-cal-label">Exportera vecka</span>
+                        </button>
                     </div>
                     <button id="btn-add-job" class="btn-primary">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -252,16 +256,17 @@
         <span id="toast-message"></span>
     </div>
 
-    <script type="module" src="src/supabase.js?v=36"></script>
-    <script type="module" src="src/auth.js?v=36"></script>
-    <script type="module" src="src/store.js?v=36"></script>
-    <script type="module" src="src/modals.js?v=36"></script>
-    <script type="module" src="src/employees.js?v=36"></script>
-    <script type="module" src="src/customers.js?v=36"></script>
-    <script type="module" src="src/calendar.js?v=36"></script>
-    <script type="module" src="src/dashboard.js?v=36"></script>
-    <script type="module" src="src/settings.js?v=36"></script>
-    <script type="module" src="src/main.js?v=36"></script>
+    <script type="module" src="src/supabase.js?v=38"></script>
+    <script type="module" src="src/auth.js?v=38"></script>
+    <script type="module" src="src/store.js?v=38"></script>
+    <script type="module" src="src/modals.js?v=38"></script>
+    <script type="module" src="src/employees.js?v=38"></script>
+    <script type="module" src="src/customers.js?v=38"></script>
+    <script type="module" src="src/calendar.js?v=38"></script>
+    <script type="module" src="src/dashboard.js?v=38"></script>
+    <script type="module" src="src/settings.js?v=38"></script>
+    <script type="module" src="src/ics.js?v=38"></script>
+    <script type="module" src="src/main.js?v=38"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/cleanschedule/sw.js').catch(() => {});

@@ -6,8 +6,10 @@ import {
     getEmployees, getCustomers, getEmployee, getCustomer,
     getJobOccurrencesForWeek, getUnscheduledJobs, addJob, updateJob, deleteJob,
     EMPLOYEE_COLORS, isEmployeeOffOnDate
-} from './store.js?v=36';
-import { openModal, closeModal } from './modals.js?v=36';
+} from './store.js?v=38';
+import { openModal, closeModal } from './modals.js?v=38';
+import { downloadWeekIcs } from './ics.js?v=38';
+import { getUser } from './supabase.js?v=38';
 
 /** Parse a numeric hours value that may use comma as decimal separator */
 function parseHours(val) {
@@ -68,9 +70,49 @@ export function initCalendar() {
         renderUnscheduledPanel(e.target.value.trim());
     });
 
+    // --- Calendar Export Button ---
+    const exportBtn = document.getElementById('btn-export-week');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', () => {
+            exportWeekToCalendar();
+        });
+    }
+
     renderCalendar();
     renderUnscheduledPanel();
     renderDayTimeline();
+}
+
+/** Export current week's jobs for the logged-in user to .ics */
+function exportWeekToCalendar() {
+    const user = getUser();
+    if (!user?.email) {
+        alert('Du m\u00e5ste vara inloggad f\u00f6r att exportera.');
+        return;
+    }
+
+    // Find the employee matching the logged-in user's email
+    const employees = getEmployees();
+    const myEmployee = employees.find(e =>
+        e.email && e.email.toLowerCase() === user.email.toLowerCase()
+    );
+
+    if (!myEmployee) {
+        alert('Ingen anst\u00e4lld hittades med din e-postadress (' + user.email + ').\n\nL\u00e4gg till din e-post p\u00e5 ditt anst\u00e4lldkort f\u00f6r att exportera schema.');
+        return;
+    }
+
+    const weekStartStr = formatDate(currentWeekStart);
+    const occurrences = getJobOccurrencesForWeek(weekStartStr);
+    const customers = getCustomers();
+    const reminderMinutes = parseInt(localStorage.getItem('cs_reminder_minutes') || '0', 10) || null;
+    const weekNum = getWeekNumber(currentWeekStart);
+    const weekLabel = `v${weekNum}-${currentWeekStart.getFullYear()}`;
+
+    const exported = downloadWeekIcs(occurrences, customers, myEmployee, reminderMinutes, weekLabel);
+    if (!exported) {
+        alert('Inga jobb schemalagda f\u00f6r dig denna vecka.');
+    }
 }
 
 export function renderCalendar() {
