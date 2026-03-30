@@ -8,7 +8,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 let _session = null;
 
-const ALLOWED_EMAILS = [
+const ADMIN_EMAILS = [
     'ingeholberg@gmail.com',
     'veronicasorianoholberg@gmail.com',
 ];
@@ -53,18 +53,12 @@ export function handleOAuthCallback() {
         // Decode user from JWT
         const payload = JSON.parse(atob(access_token.split('.')[1]));
 
-        // Check email whitelist
-        if (!ALLOWED_EMAILS.includes(payload.email?.toLowerCase())) {
-            history.replaceState(null, '', window.location.pathname);
-            alert('Åtkomst nekad. Ditt konto har inte behörighet.');
-            return false;
-        }
-
         _session = {
             access_token,
             refresh_token,
             expires_in: Number(expires_in),
             token_type,
+            role: null, // determined after login via RPC
             user: {
                 id: payload.sub,
                 email: payload.email,
@@ -91,6 +85,41 @@ export function isLoggedIn() {
     return !!_session?.access_token;
 }
 
+export function getUserRole() {
+    return _session?.role || null;
+}
+
+export function isAdmin() {
+    return _session?.role === 'admin';
+}
+
+export function isEmployee() {
+    return _session?.role === 'employee';
+}
+
+/** Call after login to determine role via DB RPC */
+export async function resolveUserRole() {
+    if (!_session?.access_token) return null;
+    try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/check_user_role`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify({}),
+        });
+        if (!res.ok) {
+            console.error('Role check failed:', res.status);
+            return null;
+        }
+        const role = await res.json();
+        _session.role = role; // 'admin', 'employee', or null
+        saveSession(_session);
+        return role;
+    } catch (e) {
+        console.error('Role check error:', e);
+        return null;
+    }
+}
+
 // Session persistence
 function saveSession(session) {
     localStorage.setItem('cs_session', JSON.stringify(session));
@@ -101,8 +130,13 @@ export function restoreSession() {
         const stored = localStorage.getItem('cs_session');
         if (stored) {
             const session = JSON.parse(stored);
-            // Verify email is whitelisted before restoring
-            if (!ALLOWED_EMAILS.includes(session?.user?.email?.toLowerCase())) {
+            // Must have a role (admin or employee) to restore
+            if (!session?.role || !session?.access_token) {
+                // No role determined yet — allow restore so we can resolve role
+                if (session?.access_token) {
+                    _session = session;
+                    return true;
+                }
                 localStorage.removeItem('cs_session');
                 return false;
             }

@@ -2,15 +2,16 @@
  * CleanSchedule — Main Entry Point (with Auth)
  */
 
-import { restoreSession, isLoggedIn, signOut, handleOAuthCallback, getUser } from './supabase.js?v=38';
-import { initAuth, renderAuthView } from './auth.js?v=38';
-import { loadAllData, getUnscheduledJobs } from './store.js?v=38';
-import { initCalendar, renderCalendar, renderUnscheduledPanel } from './calendar.js?v=38';
-import { initEmployees, renderEmployees } from './employees.js?v=38';
-import { initCustomers, renderCustomers } from './customers.js?v=38';
-import { initDashboard, renderDashboard } from './dashboard.js?v=38';
-import { initSettings, renderSettings } from './settings.js?v=38';
-import { exportData, importData, importCustomersFromCsv } from './store.js?v=38';
+import { restoreSession, isLoggedIn, signOut, handleOAuthCallback, getUser } from './supabase.js?v=44';
+import { initAuth, renderAuthView } from './auth.js?v=44';
+import { loadAllData, getUnscheduledJobs } from './store.js?v=44';
+import { initCalendar, renderCalendar, renderUnscheduledPanel } from './calendar.js?v=44';
+import { initEmployees, renderEmployees } from './employees.js?v=44';
+import { initCustomers, renderCustomers } from './customers.js?v=44';
+import { initDashboard, renderDashboard } from './dashboard.js?v=44';
+import { initSettings, renderSettings } from './settings.js?v=44';
+import { initMySchedule, renderMySchedule } from './my-schedule.js?v=44';
+import { exportData, importData, importCustomersFromCsv } from './store.js?v=44';
 
 document.addEventListener('DOMContentLoaded', async () => {
     initAuth(onLoginSuccess);
@@ -48,6 +49,8 @@ async function onLoginSuccess() {
     initEmployees();
     initCustomers();
     initDashboard();
+    initSettings();
+    initMySchedule();
 
     // Show user email in sidebar
     const user = getUser();
@@ -87,6 +90,7 @@ async function onLoginSuccess() {
             case 'schedule': renderCalendar(); renderUnscheduledPanel(); break;
             case 'employees': renderEmployees(); break;
             case 'customers': renderCustomers(); break;
+            case 'my-schedule': renderMySchedule(); break;
             case 'settings': renderSettings(); break;
         }
         updateUnscheduledNav();
@@ -184,9 +188,9 @@ async function onLoginSuccess() {
         localStorage.setItem('cs_theme', dark ? 'dark' : 'light');
     }
 
-    // Restore saved theme
+    // Restore saved theme (default: dark)
     const savedTheme = localStorage.getItem('cs_theme');
-    if (savedTheme === 'dark') applyTheme(true);
+    applyTheme(savedTheme !== 'light');
 
     if (themeBtn) {
         themeBtn.addEventListener('click', () => {

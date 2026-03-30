@@ -5,7 +5,7 @@
 import {
     getEmployees, getCustomers, getJobs, getUnscheduledJobs,
     getJobOccurrencesForWeek, EMPLOYEE_COLORS, toLocalDateStr
-} from './store.js?v=38';
+} from './store.js?v=44';
 
 function parseHours(val) {
     if (!val && val !== 0) return 0;
@@ -46,19 +46,15 @@ export function renderDashboard() {
     const activeEmployees = employees.length;
     const totalCustomers = customers.length;
 
-    // Per-employee stats
+    // Per-employee stats — everyone scaled to 40h (full-time baseline)
     const empStats = employees.map(emp => {
         const colorObj = EMPLOYEE_COLORS.find(c => c.id === emp.color) || EMPLOYEE_COLORS[0];
         const empJobs = occurrences.filter(j => j.employeeId === emp.id);
         const hoursBooked = empJobs.reduce((sum, j) => sum + parseHours(j.hours), 0);
-        const hasTarget = emp.type !== 'contractor' || parseHours(emp.defaultHours) > 0;
-        const target = hasTarget ? (parseHours(emp.defaultHours) || 40) : 0;
-        const pct = hasTarget ? Math.min(Math.round((hoursBooked / target) * 100), 100) : 0;
-        return { ...emp, hoursBooked, target, pct, hasTarget, jobCount: empJobs.length, colorObj };
-    }).filter(e => e.hasTarget || e.hoursBooked > 0);
-
-    // Find max hours among employees without targets (for proportional bar sizing)
-    const maxHoursNoTarget = Math.max(...empStats.filter(e => !e.hasTarget).map(e => e.hoursBooked), 1);
+        const target = parseHours(emp.defaultHours) || 40;
+        const pct = Math.round((hoursBooked / target) * 100);
+        return { ...emp, hoursBooked, target, pct, jobCount: empJobs.length, colorObj };
+    }).filter(e => e.hoursBooked > 0);
 
     // Weekly distribution (jobs per day)
     const dayNames = ['Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön'];
@@ -155,24 +151,21 @@ export function renderDashboard() {
                 <h2 class="dash-panel-title">Beläggning per anställd denna vecka</h2>
                 ${empStats.length === 0 ? '<p class="text-muted">Inga anställda tillagda ännu.</p>' :
                 empStats.map(e => {
-                    const isOver = e.hasTarget && e.hoursBooked > e.target;
+                    const isOver = e.hoursBooked > e.target;
                     const barColor = isOver ? '#ef4444' : e.colorObj.color;
                     const hoursStyle = isOver ? 'color:#ef4444;font-weight:600' : '';
-                    // For hourly employees: proportional bar relative to peers
-                    const barPct = e.hasTarget
-                        ? Math.min(e.pct, 100)
-                        : Math.min(Math.round((e.hoursBooked / maxHoursNoTarget) * 100), 100);
+                    const barPct = Math.min(e.pct, 100);
                     return `
                     <div class="utilization-row">
                         <div class="util-info">
                             <span class="emp-color-dot" style="background: ${e.colorObj.color}"></span>
                             <span class="util-name">${escHtml(e.name)}</span>
-                            <span class="util-hours" style="${hoursStyle}">${fmtHours(e.hoursBooked)}h${e.hasTarget ? ` / ${fmtHours(e.target)}h` : ''}</span>
+                            <span class="util-hours" style="${hoursStyle}">${fmtHours(e.hoursBooked)}h / ${fmtHours(e.target)}h</span>
                         </div>
                         <div class="util-bar-bg">
                             <div class="util-bar-fill" style="width: ${barPct}%; background: ${barColor}"></div>
                         </div>
-                        ${e.hasTarget ? `<span class="util-pct" style="${isOver ? 'color:#ef4444;font-weight:600' : ''}">${e.pct}%</span>` : ''}
+                        <span class="util-pct" style="${isOver ? 'color:#ef4444;font-weight:600' : ''}">${e.pct}%</span>
                     </div>
                 `;}).join('')}
             </div>

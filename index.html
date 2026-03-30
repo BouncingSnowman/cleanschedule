@@ -12,7 +12,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=38">
+    <link rel="stylesheet" href="css/style.css?v=44">
 </head>
 <body>
     <div id="app">
@@ -51,6 +51,12 @@
                         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
                         <span class="nav-label">Oplanerade</span>
                         <span class="unscheduled-nav-badge" id="nav-unscheduled-badge">0</span>
+                    </button>
+                </li>
+                <li id="nav-my-schedule-item">
+                    <button class="nav-btn" data-view="my-schedule" id="nav-my-schedule">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
+                        Mitt Schema
                     </button>
                 </li>
                 <li>
@@ -179,6 +185,25 @@
                 </div>
             </section>
 
+            <!-- My Schedule View (Employee self-service) -->
+            <section id="view-my-schedule" class="view">
+                <header class="view-header">
+                    <div class="week-nav">
+                        <button id="my-btn-prev-week" class="btn-icon" title="Föregående vecka">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+                        </button>
+                        <h1 id="my-week-title" class="week-title">Mitt Schema</h1>
+                        <button id="my-btn-next-week" class="btn-icon" title="Nästa vecka">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                        </button>
+                        <button id="my-btn-today" class="btn-secondary">Idag</button>
+                    </div>
+                </header>
+                <div id="my-schedule-content">
+                    <!-- Rendered by JS -->
+                </div>
+            </section>
+
             <!-- Employees View -->
             <section id="view-employees" class="view">
                 <header class="view-header">
@@ -256,17 +281,18 @@
         <span id="toast-message"></span>
     </div>
 
-    <script type="module" src="src/supabase.js?v=38"></script>
-    <script type="module" src="src/auth.js?v=38"></script>
-    <script type="module" src="src/store.js?v=38"></script>
-    <script type="module" src="src/modals.js?v=38"></script>
-    <script type="module" src="src/employees.js?v=38"></script>
-    <script type="module" src="src/customers.js?v=38"></script>
-    <script type="module" src="src/calendar.js?v=38"></script>
-    <script type="module" src="src/dashboard.js?v=38"></script>
-    <script type="module" src="src/settings.js?v=38"></script>
-    <script type="module" src="src/ics.js?v=38"></script>
-    <script type="module" src="src/main.js?v=38"></script>
+    <script type="module" src="src/supabase.js?v=44"></script>
+    <script type="module" src="src/auth.js?v=44"></script>
+    <script type="module" src="src/store.js?v=44"></script>
+    <script type="module" src="src/modals.js?v=44"></script>
+    <script type="module" src="src/employees.js?v=44"></script>
+    <script type="module" src="src/customers.js?v=44"></script>
+    <script type="module" src="src/calendar.js?v=44"></script>
+    <script type="module" src="src/dashboard.js?v=44"></script>
+    <script type="module" src="src/settings.js?v=44"></script>
+    <script type="module" src="src/my-schedule.js?v=44"></script>
+    <script type="module" src="src/ics.js?v=44"></script>
+    <script type="module" src="src/main.js?v=44"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/cleanschedule/sw.js').catch(() => {});

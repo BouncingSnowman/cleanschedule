@@ -2644,3 +2644,185 @@ body.fullscreen-calendar .week-title {
         print-color-adjust: exact;
     }
 }
+
+/* ============================================================
+   Mitt Schema (My Schedule) View
+   ============================================================ */
+
+.my-schedule-days {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 800px;
+}
+
+.my-day-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.my-day-card.today {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent), var(--shadow-sm);
+}
+
+.my-day-card.past {
+    opacity: 0.6;
+}
+
+.my-day-card.day-off {
+    background: repeating-linear-gradient(
+        -45deg,
+        var(--bg-card),
+        var(--bg-card) 4px,
+        rgba(239, 68, 68, 0.04) 4px,
+        rgba(239, 68, 68, 0.04) 8px
+    );
+}
+
+.my-day-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--bg-grid-alt);
+    border-bottom: 1px solid var(--border-light);
+}
+
+.my-day-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+}
+
+.my-day-date {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.my-today-badge {
+    background: var(--accent);
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 100px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.my-off-badge {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--danger);
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 100px;
+}
+
+.my-hours-badge {
+    margin-left: auto;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.my-day-empty {
+    padding: 12px 20px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.my-job-card {
+    padding: 12px 16px;
+    margin: 8px 12px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border-light);
+}
+
+.my-job-customer {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+}
+
+.my-job-address {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+}
+
+.my-job-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 6px;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+}
+
+.my-job-time {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.my-job-hours {
+    font-weight: 600;
+}
+
+.my-job-recurring {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+
+.my-job-notes {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    margin-top: 8px;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    padding-top: 8px;
+    border-top: 1px solid var(--border-light);
+}
+
+.my-job-notes svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.my-week-summary {
+    display: flex;
+    gap: 24px;
+    margin-top: 20px;
+    padding: 16px 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    max-width: 800px;
+}
+
+.my-summary-stat {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.my-summary-value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--accent);
+}
+
+.my-summary-label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}

@@ -2,10 +2,10 @@
  * Veckoplan — Settings (Notification Preferences)
  */
 
-import { getUser } from './supabase.js?v=38';
+import { getUser } from './supabase.js?v=44';
 import {
     dbGetSubscription, dbUpsertSubscription, dbUpdateSubscriptionPrefs
-} from './supabase.js?v=38';
+} from './supabase.js?v=44';
 
 const VAPID_PUBLIC_KEY = 'BJC_-JfmMRGUnnkfibR52IGARups1q-t-jOGLee8FoA8G_oHH-v9QNf3PrqGrmz_gVWCLAzwSZN8A1gd72q4E_c';
 
@@ -93,14 +93,14 @@ export async function renderSettings() {
             <div class="settings-card">
                 <div class="setting-row">
                     <div class="setting-info">
-                        <div class="setting-label">⏰ Påminnelse vid export</div>
-                        <div class="setting-desc">Lägg till en påminnelse i kalenderhändelser när du exporterar veckoschema</div>
+                        <div class="setting-label">⏰ Påminnelse</div>
+                        <div class="setting-desc">Påminn mig innan varje jobb när jag exporterar till kalender</div>
                     </div>
                     <select id="select-reminder" class="form-select-sm">
-                        <option value="0">Ingen</option>
-                        <option value="30">30 min före</option>
-                        <option value="60">1 timme före</option>
-                        <option value="120">2 timmar före</option>
+                        <option value="0">Ingen påminnelse</option>
+                        <option value="30">30 min innan</option>
+                        <option value="60">1 timme innan</option>
+                        <option value="120">2 timmar innan</option>
                     </select>
                 </div>
             </div>
