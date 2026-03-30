@@ -6,10 +6,10 @@ import {
     getEmployees, getCustomers, getEmployee, getCustomer,
     getJobOccurrencesForWeek, getUnscheduledJobs, addJob, updateJob, deleteJob,
     EMPLOYEE_COLORS, isEmployeeOffOnDate
-} from './store.js?v=44';
-import { openModal, closeModal } from './modals.js?v=44';
-import { downloadWeekIcs } from './ics.js?v=44';
-import { getUser } from './supabase.js?v=44';
+} from './store.js?v=46';
+import { openModal, closeModal } from './modals.js?v=46';
+import { downloadWeekIcs } from './ics.js?v=46';
+import { getUser } from './supabase.js?v=46';
 
 /** Parse a numeric hours value that may use comma as decimal separator */
 function parseHours(val) {

@@ -2,8 +2,8 @@
  * CleanSchedule — Employee Management UI
  */
 
-import { getEmployees, addEmployee, updateEmployee, deleteEmployee, EMPLOYEE_COLORS, getTimeOffForEmployee, addTimeOff, deleteTimeOff, toLocalDateStr } from './store.js?v=44';
-import { openModal, closeModal } from './modals.js?v=44';
+import { getEmployees, addEmployee, updateEmployee, deleteEmployee, EMPLOYEE_COLORS, getTimeOffForEmployee, addTimeOff, deleteTimeOff, toLocalDateStr } from './store.js?v=46';
+import { openModal, closeModal } from './modals.js?v=46';
 
 let onChangeCallback = null;
 
@@ -40,6 +40,7 @@ export function renderEmployees() {
                     <span class="card-badge ${emp.type === 'fulltime' ? 'badge-fulltime' : 'badge-contractor'}">
                         ${emp.type === 'fulltime' ? 'Heltid' : 'Timanställd'}
                     </span>
+                    ${emp.invited ? '<span class="card-badge badge-invited">✓ Inbjuden</span>' : ''}
                 </div>
                 ${emp.phone ? `
                 <div class="card-detail">
@@ -64,6 +65,7 @@ export function renderEmployees() {
                 <div class="card-actions">
                     <button class="btn-ghost btn-edit-emp" data-id="${emp.id}">Redigera</button>
                     <button class="btn-ghost btn-timeoff-emp" data-id="${emp.id}">🚫 Ledighet</button>
+                    ${emp.email && !emp.invited ? `<button class="btn-ghost btn-invite-emp" data-id="${emp.id}" style="color:var(--accent)">📨 Bjud in</button>` : ''}
                     <button class="btn-danger btn-delete-emp" data-id="${emp.id}">Ta bort</button>
                 </div>
             </div>
@@ -92,6 +94,28 @@ export function renderEmployees() {
         btn.addEventListener('click', () => {
             const emp = getEmployees().find(e => e.id === btn.dataset.id);
             if (emp) showTimeOffForm(emp);
+        });
+    });
+
+    container.querySelectorAll('.btn-invite-emp').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const emp = getEmployees().find(e => e.id === btn.dataset.id);
+            if (!emp) return;
+            if (confirm(`Bjud in ${emp.name} (${emp.email}) att logga in på CleanSchedule?`)) {
+                await updateEmployee(emp.id, { invited: true });
+                renderEmployees();
+                // Open mailto with invitation
+                const subject = encodeURIComponent('Du har bjudits in till CleanSchedule');
+                const body = encodeURIComponent(
+                    `Hej ${emp.name}!\n\n` +
+                    `Du har blivit inbjuden att använda CleanSchedule för att se ditt schema.\n\n` +
+                    `Gå till: https://aliensector.net/cleanschedule/\n` +
+                    `Logga in med din Google-adress (${emp.email}).\n\n` +
+                    `Där hittar du ditt veckoschema under "Mitt Schema".\n\n` +
+                    `/ CleanSchedule`
+                );
+                window.open(`mailto:${emp.email}?subject=${subject}&body=${body}`, '_blank');
+            }
         });
     });
 }
@@ -183,15 +207,22 @@ function showEmployeeForm(existing = null) {
             document.getElementById('emp-name').style.borderColor = 'var(--danger)';
             return;
         }
+        if (name.length > 100) {
+            alert('Namnet får max vara 100 tecken.');
+            return;
+        }
 
+        const phone = document.getElementById('emp-phone').value.trim().slice(0, 30);
+        const email = document.getElementById('emp-email').value.trim().slice(0, 100);
+        const notes = document.getElementById('emp-notes').value.trim().slice(0, 500);
         const empData = {
             name,
             type: document.getElementById('emp-type').value,
             defaultHours: document.getElementById('emp-type').value === 'contractor' ? '' : (document.getElementById('emp-hours').value.replace(',', '.') || ''),
-            phone: document.getElementById('emp-phone').value.trim(),
-            email: document.getElementById('emp-email').value.trim(),
+            phone,
+            email,
             color: chosenColor,
-            notes: document.getElementById('emp-notes').value.trim(),
+            notes,
         };
 
         try {

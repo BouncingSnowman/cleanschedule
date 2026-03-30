@@ -37,7 +37,7 @@ serve(async (req) => {
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
-    console.log(`[send-push] type=${type}, email=${employee_email}`)
+    console.log(`[send-push] type=${type}`)
 
     // Use RPC function to get subscriptions (does JOIN with auth.users)
     const rpcRes = await fetch(

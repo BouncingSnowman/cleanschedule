@@ -7,8 +7,9 @@ import {
     getEmployees, getCustomers, getEmployee, getCustomer,
     getJobOccurrencesForWeek, getTimeOffForEmployee,
     isEmployeeOffOnDate, EMPLOYEE_COLORS, toLocalDateStr
-} from './store.js?v=44';
-import { getUser } from './supabase.js?v=44';
+} from './store.js?v=46';
+import { getUser } from './supabase.js?v=46';
+import { downloadWeekIcs } from './ics.js?v=46';
 
 const DAYS_SV = ['Måndag', 'Tisdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lördag', 'Söndag'];
 const MONTHS_SV = ['januari', 'februari', 'mars', 'april', 'maj', 'juni',
@@ -34,6 +35,18 @@ export function initMySchedule() {
     document.getElementById('my-btn-today')?.addEventListener('click', () => {
         currentWeekStart = getMonday(new Date());
         renderMySchedule();
+    });
+
+    document.getElementById('my-btn-export')?.addEventListener('click', () => {
+        if (!myEmployeeId) return;
+        const emp = getEmployee(myEmployeeId);
+        const weekStartStr = formatDate(currentWeekStart);
+        const occurrences = getJobOccurrencesForWeek(weekStartStr);
+        const customers = getCustomers();
+        const reminderMin = parseInt(localStorage.getItem('cs_reminder_minutes') || '0', 10) || null;
+        const weekNum = getWeekNumber(currentWeekStart);
+        const ok = downloadWeekIcs(occurrences, customers, emp, reminderMin, `v${weekNum}`);
+        if (!ok) alert('Inga jobb att exportera denna vecka.');
     });
 
     renderMySchedule();

@@ -2,16 +2,16 @@
  * CleanSchedule — Main Entry Point (with Auth)
  */
 
-import { restoreSession, isLoggedIn, signOut, handleOAuthCallback, getUser } from './supabase.js?v=44';
-import { initAuth, renderAuthView } from './auth.js?v=44';
-import { loadAllData, getUnscheduledJobs } from './store.js?v=44';
-import { initCalendar, renderCalendar, renderUnscheduledPanel } from './calendar.js?v=44';
-import { initEmployees, renderEmployees } from './employees.js?v=44';
-import { initCustomers, renderCustomers } from './customers.js?v=44';
-import { initDashboard, renderDashboard } from './dashboard.js?v=44';
-import { initSettings, renderSettings } from './settings.js?v=44';
-import { initMySchedule, renderMySchedule } from './my-schedule.js?v=44';
-import { exportData, importData, importCustomersFromCsv } from './store.js?v=44';
+import { restoreSession, isLoggedIn, signOut, handleOAuthCallback, getUser, resolveUserRole, isAdmin, isEmployee, getUserRole } from './supabase.js?v=46';
+import { initAuth, renderAuthView } from './auth.js?v=46';
+import { loadAllData, getUnscheduledJobs } from './store.js?v=46';
+import { initCalendar, renderCalendar, renderUnscheduledPanel } from './calendar.js?v=46';
+import { initEmployees, renderEmployees } from './employees.js?v=46';
+import { initCustomers, renderCustomers } from './customers.js?v=46';
+import { initDashboard, renderDashboard } from './dashboard.js?v=46';
+import { initSettings, renderSettings } from './settings.js?v=46';
+import { initMySchedule, renderMySchedule } from './my-schedule.js?v=46';
+import { exportData, importData, importCustomersFromCsv } from './store.js?v=46';
 
 document.addEventListener('DOMContentLoaded', async () => {
     initAuth(onLoginSuccess);
@@ -35,6 +35,15 @@ async function onLoginSuccess() {
     const loadingEl = document.getElementById('loading-overlay');
     if (loadingEl) loadingEl.classList.remove('hidden');
 
+    // Resolve role (admin/employee) from database
+    const role = await resolveUserRole();
+    if (!role) {
+        if (loadingEl) loadingEl.classList.add('hidden');
+        signOut();
+        showAuthView('Ditt konto har inte behörighet. Kontakta din chef.');
+        return;
+    }
+
     await loadAllData();
 
     if (loadingEl) loadingEl.classList.add('hidden');
@@ -43,6 +52,18 @@ async function onLoginSuccess() {
     document.getElementById('view-auth').classList.add('hidden');
     document.getElementById('sidebar').classList.remove('hidden');
     document.getElementById('main-content').classList.remove('hidden');
+
+    // Role-based sidebar: employees see only Mitt Schema + Inställningar
+    if (isEmployee()) {
+        document.getElementById('nav-dashboard')?.parentElement?.classList.add('hidden');
+        document.getElementById('nav-schedule')?.parentElement?.classList.add('hidden');
+        document.getElementById('nav-unscheduled-item')?.classList.add('hidden');
+        document.getElementById('nav-employees')?.parentElement?.classList.add('hidden');
+        document.getElementById('nav-customers')?.parentElement?.classList.add('hidden');
+        document.getElementById('btn-export')?.parentElement?.classList?.add('hidden');
+        document.getElementById('btn-import')?.parentElement?.classList?.add('hidden');
+        document.getElementById('btn-print')?.parentElement?.classList?.add('hidden');
+    }
 
     // Init modules
     initCalendar();
@@ -258,16 +279,20 @@ async function onLoginSuccess() {
         return active?.dataset.view || 'dashboard';
     }
 
-    // Start on dashboard
-    renderDashboard();
-    updateUnscheduledNav();
+    // Start on appropriate view
+    if (isEmployee()) {
+        window._switchView('my-schedule');
+    } else {
+        renderDashboard();
+        updateUnscheduledNav();
+    }
 }
 
-function showAuthView() {
+function showAuthView(errorMsg) {
     document.getElementById('view-auth').classList.remove('hidden');
     document.getElementById('sidebar').classList.add('hidden');
     document.getElementById('main-content').classList.add('hidden');
-    renderAuthView();
+    renderAuthView(errorMsg);
 }
 
 // --- Toast helper ---
