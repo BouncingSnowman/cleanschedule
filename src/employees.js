@@ -2,8 +2,8 @@
  * CleanSchedule — Employee Management UI
  */
 
-import { getEmployees, addEmployee, updateEmployee, deleteEmployee, EMPLOYEE_COLORS, getTimeOffForEmployee, addTimeOff, deleteTimeOff, toLocalDateStr } from './store.js?v=46';
-import { openModal, closeModal } from './modals.js?v=46';
+import { getEmployees, addEmployee, updateEmployee, deleteEmployee, EMPLOYEE_COLORS, getTimeOffForEmployee, addTimeOff, deleteTimeOff, toLocalDateStr, getJobs } from './store.js?v=64';
+import { openModal, closeModal } from './modals.js?v=64';
 
 let onChangeCallback = null;
 
@@ -40,7 +40,6 @@ export function renderEmployees() {
                     <span class="card-badge ${emp.type === 'fulltime' ? 'badge-fulltime' : 'badge-contractor'}">
                         ${emp.type === 'fulltime' ? 'Heltid' : 'Timanställd'}
                     </span>
-                    ${emp.invited ? '<span class="card-badge badge-invited">✓ Inbjuden</span>' : ''}
                 </div>
                 ${emp.phone ? `
                 <div class="card-detail">
@@ -62,11 +61,10 @@ export function renderEmployees() {
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
                     <em>${escHtml(emp.notes)}</em>
                 </div>` : ''}
+                ${emp.invited ? `<div class="card-access"><span class="badge-login-status">${emp.isAdmin ? '🔑 Admin' : '✓ Kan logga in'}</span></div>` : ''}
                 <div class="card-actions">
                     <button class="btn-ghost btn-edit-emp" data-id="${emp.id}">Redigera</button>
                     <button class="btn-ghost btn-timeoff-emp" data-id="${emp.id}">🚫 Ledighet</button>
-                    ${emp.email && !emp.invited ? `<button class="btn-ghost btn-invite-emp" data-id="${emp.id}" style="color:var(--accent)">📨 Bjud in</button>` : ''}
-                    <button class="btn-danger btn-delete-emp" data-id="${emp.id}">Ta bort</button>
                 </div>
             </div>
         `;
@@ -80,42 +78,10 @@ export function renderEmployees() {
         });
     });
 
-    container.querySelectorAll('.btn-delete-emp').forEach(btn => {
-        btn.addEventListener('click', async () => {
-            if (confirm('Är du säker på att du vill ta bort denna anställd? Alla deras jobb tas också bort.')) {
-                await deleteEmployee(btn.dataset.id);
-                renderEmployees();
-                if (onChangeCallback) onChangeCallback();
-            }
-        });
-    });
-
     container.querySelectorAll('.btn-timeoff-emp').forEach(btn => {
         btn.addEventListener('click', () => {
             const emp = getEmployees().find(e => e.id === btn.dataset.id);
             if (emp) showTimeOffForm(emp);
-        });
-    });
-
-    container.querySelectorAll('.btn-invite-emp').forEach(btn => {
-        btn.addEventListener('click', async () => {
-            const emp = getEmployees().find(e => e.id === btn.dataset.id);
-            if (!emp) return;
-            if (confirm(`Bjud in ${emp.name} (${emp.email}) att logga in på CleanSchedule?`)) {
-                await updateEmployee(emp.id, { invited: true });
-                renderEmployees();
-                // Open mailto with invitation
-                const subject = encodeURIComponent('Du har bjudits in till CleanSchedule');
-                const body = encodeURIComponent(
-                    `Hej ${emp.name}!\n\n` +
-                    `Du har blivit inbjuden att använda CleanSchedule för att se ditt schema.\n\n` +
-                    `Gå till: https://aliensector.net/cleanschedule/\n` +
-                    `Logga in med din Google-adress (${emp.email}).\n\n` +
-                    `Där hittar du ditt veckoschema under "Mitt Schema".\n\n` +
-                    `/ CleanSchedule`
-                );
-                window.open(`mailto:${emp.email}?subject=${subject}&body=${body}`, '_blank');
-            }
         });
     });
 }
@@ -172,8 +138,25 @@ function showEmployeeForm(existing = null) {
                     ${colorSwatches}
                 </div>
             </div>
+            ${isEdit ? `
+            <div class="form-divider"></div>
+            <div class="form-group">
+                <label>Åtkomst</label>
+                <div class="card-access" style="padding-top:4px">
+                    <label class="access-toggle ${!existing.email ? 'disabled' : ''}">
+                        <input type="checkbox" id="modal-can-login" ${existing.invited ? 'checked' : ''} ${!existing.email ? 'disabled' : ''}>
+                        <span>Kan logga in</span>
+                    </label>
+                    <label class="access-toggle ${!existing.email ? 'disabled' : ''}">
+                        <input type="checkbox" id="modal-is-admin" ${existing.isAdmin ? 'checked' : ''} ${!existing.email ? 'disabled' : ''}>
+                        <span>Är admin</span>
+                    </label>
+                </div>
+            </div>
+            ` : ''}
         `,
         footer: `
+            ${isEdit ? '<button class="btn-danger" id="modal-delete" style="margin-right:auto">Ta bort</button>' : ''}
             <button class="btn-ghost" id="modal-cancel">Avbryt</button>
             <button class="btn-primary" id="modal-save">${isEdit ? 'Spara' : 'Lägg till'}</button>
         `,
@@ -238,6 +221,76 @@ function showEmployeeForm(existing = null) {
             alert('Kunde inte spara: ' + err.message);
         }
     });
+
+    // --- Access checkboxes (edit mode only) ---
+    if (isEdit) {
+        const loginChk = document.getElementById('modal-can-login');
+        const adminChk = document.getElementById('modal-is-admin');
+
+        if (loginChk) {
+            loginChk.addEventListener('change', async () => {
+                existing.invited = loginChk.checked;
+                try {
+                    await updateEmployee(existing.id, { invited: loginChk.checked });
+                } catch (err) {
+                    existing.invited = !loginChk.checked;
+                    loginChk.checked = !loginChk.checked;
+                    alert('Kunde inte spara: ' + err.message);
+                }
+            });
+        }
+
+        if (adminChk) {
+            adminChk.addEventListener('change', async () => {
+                // Require typing "Admin" to grant
+                if (adminChk.checked) {
+                    const c = prompt('Skriv "Admin" för att bekräfta:');
+                    if (c !== 'Admin') { adminChk.checked = false; return; }
+                }
+                // Prevent removing last admin
+                if (!adminChk.checked) {
+                    const adminCount = getEmployees().filter(e => e.isAdmin && e.invited).length;
+                    if (adminCount <= 1) {
+                        adminChk.checked = true;
+                        alert('Det måste finnas minst en admin.');
+                        return;
+                    }
+                    const c = prompt('Skriv "noadmin" för att bekräfta:');
+                    if (c !== 'noadmin') { adminChk.checked = true; return; }
+                }
+                existing.isAdmin = adminChk.checked;
+                try {
+                    await updateEmployee(existing.id, { isAdmin: adminChk.checked });
+                } catch (err) {
+                    existing.isAdmin = !adminChk.checked;
+                    adminChk.checked = !adminChk.checked;
+                    alert('Kunde inte spara: ' + err.message);
+                }
+            });
+        }
+
+        const deleteBtn = document.getElementById('modal-delete');
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', async () => {
+                // Check for future jobs assigned to this employee
+                const today = toLocalDateStr(new Date());
+                const futureJobs = getJobs().filter(j => 
+                    j.employeeId === existing.id && j.date && j.date >= today
+                );
+                if (futureJobs.length > 0) {
+                    alert(`${existing.name} har ${futureJobs.length} jobb schemalagda idag eller framåt. Omfördela dessa jobb till en annan anställd innan du tar bort.`);
+                    return;
+                }
+
+                const c = prompt(`Skriv "tabort" för att ta bort ${existing.name}:`);
+                if (c !== 'tabort') return;
+                await deleteEmployee(existing.id);
+                closeModal();
+                renderEmployees();
+                if (onChangeCallback) onChangeCallback();
+            });
+        }
+    }
 }
 
 function showTimeOffForm(emp) {

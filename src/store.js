@@ -4,7 +4,7 @@
  * All write operations persist to Supabase and update local cache.
  */
 
-import { dbSelect, dbInsert, dbUpdate, dbDelete, isLoggedIn } from './supabase.js?v=46';
+import { dbSelect, dbInsert, dbUpdate, dbDelete, isLoggedIn } from './supabase.js?v=64';
 
 const SUPABASE_URL = 'https://cywcnyimlhiwbbqqzvoe.supabase.co';
 
@@ -45,6 +45,7 @@ let _cache = {
     customers: [],
     jobs: [],
     timeOff: [],
+    jobExceptions: [],
     loaded: false,
 };
 
@@ -52,16 +53,18 @@ let _cache = {
 export async function loadAllData() {
     if (!isLoggedIn()) return;
     try {
-        const [employees, customers, jobs, timeOff] = await Promise.all([
+        const [employees, customers, jobs, timeOff, jobExceptions] = await Promise.all([
             dbSelect('employees', 'order=created_at.asc'),
             dbSelect('customers', 'order=created_at.asc'),
             dbSelect('jobs', 'order=created_at.asc'),
             dbSelect('time_off', 'order=created_at.asc'),
+            dbSelect('job_exceptions', 'order=created_at.asc'),
         ]);
         _cache.employees = mapFromDb(employees, 'employee');
         _cache.customers = mapFromDb(customers, 'customer');
         _cache.jobs = mapFromDb(jobs, 'job');
         _cache.timeOff = mapFromDb(timeOff, 'timeOff');
+        _cache.jobExceptions = mapFromDb(jobExceptions, 'jobException');
         _cache.loaded = true;
     } catch (e) {
         console.error('Failed to load data:', e);
@@ -76,6 +79,7 @@ function mapFromDb(rows, type) {
             type: r.type, color: r.color,
             defaultHours: r.default_hours, notes: r.notes,
             invited: r.invited || false,
+            isAdmin: r.is_admin || false,
         };
         if (type === 'customer') return {
             id: r.id, name: r.name, address: r.address,
@@ -85,11 +89,15 @@ function mapFromDb(rows, type) {
         if (type === 'job') return {
             id: r.id, customerId: r.customer_id, employeeId: r.employee_id,
             date: r.date, startTime: r.start_time, hours: r.hours,
-            recurring: r.recurring, notes: r.notes,
+            recurring: r.recurring, recurringEnd: r.recurring_end || null, notes: r.notes,
         };
         if (type === 'timeOff') return {
             id: r.id, employeeId: r.employee_id,
             startDate: r.start_date, endDate: r.end_date, reason: r.reason,
+        };
+        if (type === 'jobException') return {
+            id: r.id, jobId: r.job_id, exceptionDate: r.exception_date,
+            type: r.type, overrideEmployeeId: r.override_employee_id,
         };
         return r;
     });
@@ -106,6 +114,7 @@ function toDbEmployee(e) {
     if (e.defaultHours !== undefined) r.default_hours = e.defaultHours === '' ? null : e.defaultHours;
     if (e.notes !== undefined) r.notes = e.notes;
     if (e.invited !== undefined) r.invited = e.invited;
+    if (e.isAdmin !== undefined) r.is_admin = e.isAdmin;
     return r;
 }
 
@@ -128,6 +137,7 @@ function toDbJob(j) {
     if (j.startTime !== undefined) r.start_time = j.startTime;
     if (j.hours !== undefined) r.hours = j.hours;
     if (j.recurring !== undefined) r.recurring = j.recurring;
+    if (j.recurringEnd !== undefined) r.recurring_end = j.recurringEnd || null;
     if (j.notes !== undefined) r.notes = j.notes;
     return r;
 }
@@ -138,6 +148,15 @@ function toDbTimeOff(t) {
     if (t.startDate !== undefined) r.start_date = t.startDate;
     if (t.endDate !== undefined) r.end_date = t.endDate;
     if (t.reason !== undefined) r.reason = t.reason;
+    return r;
+}
+
+function toDbJobException(e) {
+    const r = {};
+    if (e.jobId !== undefined) r.job_id = e.jobId;
+    if (e.exceptionDate !== undefined) r.exception_date = e.exceptionDate;
+    if (e.type !== undefined) r.type = e.type;
+    if (e.overrideEmployeeId !== undefined) r.override_employee_id = e.overrideEmployeeId || null;
     return r;
 }
 
@@ -233,7 +252,10 @@ export function getJobOccurrencesForWeek(weekStart) {
         // Recurring
         if (job.recurring && job.recurring !== 'none') {
             const dayOfWeek = jobDate.getDay();
+            const recurringEndDate = job.recurringEnd ? new Date(job.recurringEnd + 'T00:00:00') : null;
             for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                // Skip dates at or after the recurring end date
+                if (recurringEndDate && d >= recurringEndDate) continue;
                 if (d.getDay() === dayOfWeek && d > jobDate) {
                     let match = false;
                     const targetDate = new Date(d);
@@ -252,6 +274,22 @@ export function getJobOccurrencesForWeek(weekStart) {
                         occurrences.push({ ...job, occurrenceDate: dateStr, isRecurring: true });
                     }
                 }
+            }
+        }
+    }
+
+    // Apply job exceptions
+    for (const occ of occurrences) {
+        const exceptions = _cache.jobExceptions.filter(
+            e => e.jobId === occ.id && e.exceptionDate === occ.occurrenceDate
+        );
+        for (const ex of exceptions) {
+            if (ex.type === 'cancelled') {
+                occ.isCancelled = true;
+            }
+            if (ex.type === 'employee_override') {
+                occ.employeeId = ex.overrideEmployeeId;
+                occ.hasEmployeeOverride = true;
             }
         }
     }
@@ -307,6 +345,86 @@ export async function updateJob(id, updates) {
 export async function deleteJob(id) {
     await dbDelete('jobs', id);
     _cache.jobs = _cache.jobs.filter(j => j.id !== id);
+    // CASCADE deletes exceptions in DB, clean cache too
+    _cache.jobExceptions = _cache.jobExceptions.filter(e => e.jobId !== id);
+}
+
+// --- Job Exceptions ---
+
+export function getJobExceptions() {
+    return _cache.jobExceptions;
+}
+
+export function getJobExceptionForDate(jobId, date) {
+    return _cache.jobExceptions.find(
+        e => e.jobId === jobId && e.exceptionDate === date
+    ) || null;
+}
+
+export function isOccurrenceCancelled(jobId, date) {
+    return _cache.jobExceptions.some(
+        e => e.jobId === jobId && e.exceptionDate === date && e.type === 'cancelled'
+    );
+}
+
+export async function addJobException(exception) {
+    const rows = await dbInsert('job_exceptions', toDbJobException(exception));
+    const added = mapFromDb(rows, 'jobException')[0];
+    _cache.jobExceptions.push(added);
+    return added;
+}
+
+export async function deleteJobException(id) {
+    await dbDelete('job_exceptions', id);
+    _cache.jobExceptions = _cache.jobExceptions.filter(e => e.id !== id);
+}
+
+export async function deleteJobExceptionByDateAndType(jobId, date, type) {
+    const ex = _cache.jobExceptions.find(
+        e => e.jobId === jobId && e.exceptionDate === date && e.type === type
+    );
+    if (ex) {
+        await deleteJobException(ex.id);
+    }
+}
+
+/** Stop a recurring job from generating future occurrences from a given date. */
+export async function stopRecurringFromDate(jobId, fromDate) {
+    const job = _cache.jobs.find(j => j.id === jobId);
+    if (!job) return;
+
+    // If the fromDate IS the original job date, just delete the entire job
+    if (job.date === fromDate) {
+        await deleteJob(jobId);
+        return;
+    }
+
+    // Set recurring_end so past occurrences are preserved but nothing at/after fromDate
+    await updateJob(jobId, { recurringEnd: fromDate });
+}
+
+/**
+ * Split a recurring job: end the old series and create a new one from the given date.
+ * Used for "all future" employee changes.
+ */
+export async function splitRecurringJob(jobId, fromDate, updates) {
+    const job = _cache.jobs.find(j => j.id === jobId);
+    if (!job) return;
+
+    // End the old series at fromDate (past occurrences preserved)
+    await updateJob(jobId, { recurringEnd: fromDate });
+
+    // Create a new recurring job from fromDate with the updates applied
+    const newJob = {
+        customerId: job.customerId,
+        employeeId: updates.employeeId || job.employeeId,
+        date: fromDate,
+        startTime: job.startTime,
+        hours: job.hours,
+        recurring: updates.recurring || job.recurring,
+        notes: job.notes,
+    };
+    return await addJob(newJob);
 }
 
 // --- Time Off ---
@@ -375,7 +493,7 @@ export async function importData(file) {
                 for (const j of _cache.jobs) await dbDelete('jobs', j.id);
                 for (const c of _cache.customers) await dbDelete('customers', c.id);
                 for (const emp of _cache.employees) await dbDelete('employees', emp.id);
-                _cache = { employees: [], customers: [], jobs: [], timeOff: [], loaded: true };
+                _cache = { employees: [], customers: [], jobs: [], timeOff: [], jobExceptions: [], loaded: true };
 
                 // Import with ID mapping (old ID → new ID)
                 const empIdMap = {};

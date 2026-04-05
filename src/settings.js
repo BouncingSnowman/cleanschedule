@@ -2,10 +2,10 @@
  * Veckoplan — Settings (Notification Preferences)
  */
 
-import { getUser } from './supabase.js?v=46';
+import { getUser, dbGetSetting, dbSetSetting, dbDeleteSetting } from './supabase.js?v=64';
 import {
     dbGetSubscription, dbUpsertSubscription, dbUpdateSubscriptionPrefs
-} from './supabase.js?v=46';
+} from './supabase.js?v=64';
 
 const VAPID_PUBLIC_KEY = 'BJC_-JfmMRGUnnkfibR52IGARups1q-t-jOGLee8FoA8G_oHH-v9QNf3PrqGrmz_gVWCLAzwSZN8A1gd72q4E_c';
 
@@ -105,9 +105,24 @@ export async function renderSettings() {
                 </div>
             </div>
         </div>
+
+        <div class="settings-section" style="margin-top: 24px">
+            <h2 class="settings-title">🤖 Implementera chatbot</h2>
+            <div class="settings-card">
+                <div class="setting-info" style="margin-bottom: 12px">
+                    <div class="setting-desc">Klistra in ditt chatbot-skript (t.ex. från Chatbase). Skriptet aktiveras direkt och laddas vid varje inloggning.</div>
+                </div>
+                <textarea id="chatbot-script" class="form-input" rows="6" style="font-family: monospace; font-size: 0.82rem; resize: vertical;" placeholder="Klistra in &lt;script&gt;...&lt;/script&gt; här"></textarea>
+                <div style="display:flex; gap:10px; margin-top:12px; align-items:center">
+                    <button id="btn-save-chatbot" class="btn-primary">Spara &amp; aktivera</button>
+                    <button id="btn-remove-chatbot" class="btn-ghost">Ta bort chatbot</button>
+                    <span id="chatbot-status" style="font-size:0.85rem; color:var(--text-muted)"></span>
+                </div>
+            </div>
+        </div>
     `;
 
-    // --- Calendar Reminder handler (always available, independent of push) ---
+    // --- Calendar Reminder handler ---
     const reminderSelect = document.getElementById('select-reminder');
     if (reminderSelect) {
         const saved = localStorage.getItem('cs_reminder_minutes') || '0';
@@ -116,6 +131,41 @@ export async function renderSettings() {
             localStorage.setItem('cs_reminder_minutes', reminderSelect.value);
         });
     }
+
+    // --- Chatbot handler ---
+    const chatbotTextarea = document.getElementById('chatbot-script');
+    const chatbotStatus = document.getElementById('chatbot-status');
+
+    // Load existing script from DB
+    const dbScript = await dbGetSetting('chatbot_script');
+    if (chatbotTextarea && dbScript) chatbotTextarea.value = dbScript;
+    if (dbScript && chatbotStatus) chatbotStatus.textContent = '✅ Chatbot aktiv';
+
+    document.getElementById('btn-save-chatbot')?.addEventListener('click', async () => {
+        const raw = chatbotTextarea?.value?.trim() || '';
+        if (!raw) {
+            chatbotStatus.textContent = '⚠️ Klistra in ett skript först.';
+            return;
+        }
+        if (!raw.includes('<script') || !raw.includes('</script>')) {
+            chatbotStatus.textContent = '❌ Skriptet verkar inte vara giltigt.';
+            return;
+        }
+        chatbotStatus.textContent = 'Sparar...';
+        await dbSetSetting('chatbot_script', raw);
+        localStorage.setItem('cs_chatbot_script', raw); // local cache
+        injectChatbotScript(raw);
+        chatbotStatus.textContent = '✅ Chatbot sparad och aktiverad!';
+        setTimeout(() => { chatbotStatus.textContent = '✅ Chatbot aktiv'; }, 3000);
+    });
+
+    document.getElementById('btn-remove-chatbot')?.addEventListener('click', async () => {
+        await dbDeleteSetting('chatbot_script');
+        localStorage.removeItem('cs_chatbot_script');
+        if (chatbotTextarea) chatbotTextarea.value = '';
+        chatbotStatus.textContent = 'Chatbot borttagen. Sidan laddas om...';
+        setTimeout(() => location.reload(), 1500);
+    });
 
     // --- Push Notification Event handlers ---
     if (!pushSupported) return;
@@ -211,4 +261,45 @@ function showSettingsStatus(msg, isError = false) {
     el.style.background = isError ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)';
     el.style.color = isError ? '#f87171' : '#34d399';
     setTimeout(() => el.remove(), 5000);
+}
+
+/**
+ * Extract inline script content and inject it into the page.
+ * Only runs code from scripts the admin explicitly pasted.
+ * Security: only allows scripts referencing known chatbot CDN domains.
+ */
+export function injectChatbotScript(raw) {
+    if (!raw) return;
+
+    // Whitelist of allowed chatbot CDN domains
+    const ALLOWED_DOMAINS = [
+        'chatbase.co',
+        'crisp.chat',
+        'tawk.to',
+        'intercom.io',
+        'tidio.com',
+        'freshchat.com',
+        'zopim.com',
+        'zendesk.com',
+    ];
+
+    const hasTrustedDomain = ALLOWED_DOMAINS.some(domain => raw.includes(domain));
+    if (!hasTrustedDomain) {
+        console.warn('CleanSchedule: chatbot script rejected — domain not in allowlist.');
+        return;
+    }
+
+    // Extract content between <script> tags
+    const match = raw.match(/<script[^>]*>([\s\S]*?)<\/script>/i);
+    if (!match) return;
+    const code = match[1].trim();
+    if (!code) return;
+
+    // Remove any existing injected chatbot script to avoid duplicates
+    document.querySelectorAll('script[data-chatbot-inject]').forEach(s => s.remove());
+
+    const el = document.createElement('script');
+    el.setAttribute('data-chatbot-inject', '1');
+    el.textContent = code;
+    document.head.appendChild(el);
 }

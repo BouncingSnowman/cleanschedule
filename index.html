@@ -12,7 +12,12 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=46">
+    <link rel="stylesheet" href="css/style.css?v=64">
+    <script>
+        // Apply saved theme immediately to prevent flash
+        const t = localStorage.getItem('cs_theme');
+        document.documentElement.setAttribute('data-theme', t !== 'light' ? 'dark' : 'light');
+    </script>
 </head>
 <body>
     <div id="app">
@@ -81,9 +86,9 @@
             <div class="sidebar-actions">
                 <button id="btn-export" class="sidebar-action-btn" title="Exportera data">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    Exportera
+                    Exportera veckodata
                 </button>
-                <button id="btn-import" class="sidebar-action-btn" title="Importera data">
+                <button id="btn-import" class="sidebar-action-btn" title="Importera tidigare exporterad veckodata (JSON-fil)">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                     Importera
                 </button>
@@ -199,7 +204,7 @@
                         <button id="my-btn-today" class="btn-secondary">Idag</button>
                         <button id="my-btn-export" class="btn-secondary btn-export-cal" title="Exportera till kalender">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M9 16l2 2 4-4"/></svg>
-                            <span class="btn-export-cal-label">📅 Google Kalender</span>
+                            <span class="btn-export-cal-label">Exportera till kalender</span>
                         </button>
                     </div>
                 </header>
@@ -285,18 +290,18 @@
         <span id="toast-message"></span>
     </div>
 
-    <script type="module" src="src/supabase.js?v=46"></script>
-    <script type="module" src="src/auth.js?v=46"></script>
-    <script type="module" src="src/store.js?v=46"></script>
-    <script type="module" src="src/modals.js?v=46"></script>
-    <script type="module" src="src/employees.js?v=46"></script>
-    <script type="module" src="src/customers.js?v=46"></script>
-    <script type="module" src="src/calendar.js?v=46"></script>
-    <script type="module" src="src/dashboard.js?v=46"></script>
-    <script type="module" src="src/settings.js?v=46"></script>
-    <script type="module" src="src/my-schedule.js?v=46"></script>
-    <script type="module" src="src/ics.js?v=46"></script>
-    <script type="module" src="src/main.js?v=46"></script>
+    <script type="module" src="src/supabase.js?v=64"></script>
+    <script type="module" src="src/auth.js?v=64"></script>
+    <script type="module" src="src/store.js?v=64"></script>
+    <script type="module" src="src/modals.js?v=64"></script>
+    <script type="module" src="src/employees.js?v=64"></script>
+    <script type="module" src="src/customers.js?v=64"></script>
+    <script type="module" src="src/calendar.js?v=64"></script>
+    <script type="module" src="src/dashboard.js?v=64"></script>
+    <script type="module" src="src/settings.js?v=64"></script>
+    <script type="module" src="src/my-schedule.js?v=64"></script>
+    <script type="module" src="src/ics.js?v=64"></script>
+    <script type="module" src="src/main.js?v=64"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/cleanschedule/sw.js').catch(() => {});

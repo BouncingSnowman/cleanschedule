@@ -272,3 +272,27 @@ export async function dbUpdateSubscriptionPrefs(endpoint, prefs) {
         body: prefs,
     });
 }
+
+// --- App Settings (cross-device persistent key-value store) ---
+
+export async function dbGetSetting(key) {
+    try {
+        const rows = await dbFetch('app_settings', { query: `key=eq.${encodeURIComponent(key)}` });
+        return rows?.[0]?.value ?? null;
+    } catch { return null; }
+}
+
+export async function dbSetSetting(key, value) {
+    return dbFetch('app_settings', {
+        method: 'POST',
+        body: { key, value, updated_at: new Date().toISOString() },
+        headers: { 'Prefer': 'resolution=merge-duplicates' },
+    });
+}
+
+export async function dbDeleteSetting(key) {
+    return dbFetch('app_settings', {
+        method: 'DELETE',
+        query: `key=eq.${encodeURIComponent(key)}`,
+    });
+}

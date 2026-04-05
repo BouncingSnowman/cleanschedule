@@ -2,16 +2,16 @@
  * CleanSchedule — Main Entry Point (with Auth)
  */
 
-import { restoreSession, isLoggedIn, signOut, handleOAuthCallback, getUser, resolveUserRole, isAdmin, isEmployee, getUserRole } from './supabase.js?v=46';
-import { initAuth, renderAuthView } from './auth.js?v=46';
-import { loadAllData, getUnscheduledJobs } from './store.js?v=46';
-import { initCalendar, renderCalendar, renderUnscheduledPanel } from './calendar.js?v=46';
-import { initEmployees, renderEmployees } from './employees.js?v=46';
-import { initCustomers, renderCustomers } from './customers.js?v=46';
-import { initDashboard, renderDashboard } from './dashboard.js?v=46';
-import { initSettings, renderSettings } from './settings.js?v=46';
-import { initMySchedule, renderMySchedule } from './my-schedule.js?v=46';
-import { exportData, importData, importCustomersFromCsv } from './store.js?v=46';
+import { restoreSession, isLoggedIn, signOut, handleOAuthCallback, getUser, resolveUserRole, isAdmin, isEmployee, getUserRole, dbGetSetting } from './supabase.js?v=64';
+import { initAuth, renderAuthView } from './auth.js?v=64';
+import { loadAllData, getUnscheduledJobs } from './store.js?v=64';
+import { initCalendar, renderCalendar, renderUnscheduledPanel } from './calendar.js?v=64';
+import { initEmployees, renderEmployees } from './employees.js?v=64';
+import { initCustomers, renderCustomers } from './customers.js?v=64';
+import { initDashboard, renderDashboard } from './dashboard.js?v=64';
+import { initSettings, renderSettings, injectChatbotScript } from './settings.js?v=64';
+import { initMySchedule, renderMySchedule } from './my-schedule.js?v=64';
+import { exportData, importData, importCustomersFromCsv } from './store.js?v=64';
 
 document.addEventListener('DOMContentLoaded', async () => {
     initAuth(onLoginSuccess);
@@ -53,16 +53,16 @@ async function onLoginSuccess() {
     document.getElementById('sidebar').classList.remove('hidden');
     document.getElementById('main-content').classList.remove('hidden');
 
-    // Role-based sidebar: employees see only Mitt Schema + Inställningar
+    // Role-based sidebar: employees see only Mitt Schema + Inställningar + Logga ut
     if (isEmployee()) {
         document.getElementById('nav-dashboard')?.parentElement?.classList.add('hidden');
         document.getElementById('nav-schedule')?.parentElement?.classList.add('hidden');
         document.getElementById('nav-unscheduled-item')?.classList.add('hidden');
         document.getElementById('nav-employees')?.parentElement?.classList.add('hidden');
         document.getElementById('nav-customers')?.parentElement?.classList.add('hidden');
-        document.getElementById('btn-export')?.parentElement?.classList?.add('hidden');
-        document.getElementById('btn-import')?.parentElement?.classList?.add('hidden');
-        document.getElementById('btn-print')?.parentElement?.classList?.add('hidden');
+        document.getElementById('btn-export')?.classList.add('hidden');
+        document.getElementById('btn-import')?.classList.add('hidden');
+        document.getElementById('btn-print')?.classList.add('hidden');
     }
 
     // Init modules
@@ -72,6 +72,22 @@ async function onLoginSuccess() {
     initDashboard();
     initSettings();
     initMySchedule();
+
+    // Inject saved chatbot script — load from DB (source of truth), fallback to local cache
+    try {
+        const dbScript = await dbGetSetting('chatbot_script');
+        if (dbScript) {
+            localStorage.setItem('cs_chatbot_script', dbScript); // refresh cache
+            injectChatbotScript(dbScript);
+        } else {
+            // Fallback to local cache if DB has nothing (offline / first load)
+            const cached = localStorage.getItem('cs_chatbot_script');
+            if (cached) injectChatbotScript(cached);
+        }
+    } catch {
+        const cached = localStorage.getItem('cs_chatbot_script');
+        if (cached) injectChatbotScript(cached);
+    }
 
     // Show user email in sidebar
     const user = getUser();
@@ -286,6 +302,22 @@ async function onLoginSuccess() {
         renderDashboard();
         updateUnscheduledNav();
     }
+
+    // --- Auto-refresh when tab becomes visible (sync changes from other users) ---
+    let lastRefresh = Date.now();
+    document.addEventListener('visibilitychange', async () => {
+        if (document.visibilityState === 'visible' && Date.now() - lastRefresh > 5000) {
+            lastRefresh = Date.now();
+            await loadAllData();
+            const current = getCurrentView();
+            switch (current) {
+                case 'schedule': renderCalendar(); renderUnscheduledPanel(); break;
+                case 'dashboard': renderDashboard(); break;
+                case 'my-schedule': renderMySchedule(); break;
+            }
+            updateUnscheduledNav();
+        }
+    });
 }
 
 function showAuthView(errorMsg) {

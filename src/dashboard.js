@@ -5,7 +5,7 @@
 import {
     getEmployees, getCustomers, getJobs, getUnscheduledJobs,
     getJobOccurrencesForWeek, EMPLOYEE_COLORS, toLocalDateStr
-} from './store.js?v=46';
+} from './store.js?v=64';
 
 function parseHours(val) {
     if (!val && val !== 0) return 0;
@@ -40,16 +40,17 @@ export function renderDashboard() {
     const weekStartStr = toLocalDateStr(weekStart);
     const occurrences = getJobOccurrencesForWeek(weekStartStr);
 
-    // --- Stats ---
-    const totalJobsThisWeek = occurrences.length;
-    const totalHoursThisWeek = occurrences.reduce((sum, j) => sum + parseHours(j.hours), 0);
+    // --- Stats (exclude cancelled occurrences) ---
+    const activeOccurrences = occurrences.filter(j => !j.isCancelled);
+    const totalJobsThisWeek = activeOccurrences.length;
+    const totalHoursThisWeek = activeOccurrences.reduce((sum, j) => sum + parseHours(j.hours), 0);
     const activeEmployees = employees.length;
     const totalCustomers = customers.length;
 
     // Per-employee stats — everyone scaled to 40h (full-time baseline)
     const empStats = employees.map(emp => {
         const colorObj = EMPLOYEE_COLORS.find(c => c.id === emp.color) || EMPLOYEE_COLORS[0];
-        const empJobs = occurrences.filter(j => j.employeeId === emp.id);
+        const empJobs = activeOccurrences.filter(j => j.employeeId === emp.id);
         const hoursBooked = empJobs.reduce((sum, j) => sum + parseHours(j.hours), 0);
         const target = parseHours(emp.defaultHours) || 40;
         const pct = Math.round((hoursBooked / target) * 100);
@@ -64,18 +65,18 @@ export function renderDashboard() {
         const d = new Date(weekStart);
         d.setDate(d.getDate() + i);
         const ds = toLocalDateStr(d);
-        const dayJobs = occurrences.filter(j => j.occurrenceDate === ds);
+        const dayJobs = activeOccurrences.filter(j => j.occurrenceDate === ds);
         dayJobCounts.push(dayJobs.length);
         dayHoursCounts.push(dayJobs.reduce((s, j) => s + parseHours(j.hours), 0));
     }
 
     // Today's jobs
     const todayStr = toLocalDateStr(now);
-    const todayJobs = occurrences.filter(j => j.occurrenceDate === todayStr);
+    const todayJobs = activeOccurrences.filter(j => j.occurrenceDate === todayStr);
 
     // Customer distribution (donut chart data)
     const custJobMap = {};
-    occurrences.forEach(j => {
+    activeOccurrences.forEach(j => {
         const key = j.customerId || 'unknown';
         custJobMap[key] = (custJobMap[key] || 0) + 1;
     });

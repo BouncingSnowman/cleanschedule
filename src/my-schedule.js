@@ -7,9 +7,9 @@ import {
     getEmployees, getCustomers, getEmployee, getCustomer,
     getJobOccurrencesForWeek, getTimeOffForEmployee,
     isEmployeeOffOnDate, EMPLOYEE_COLORS, toLocalDateStr
-} from './store.js?v=46';
-import { getUser } from './supabase.js?v=46';
-import { downloadWeekIcs } from './ics.js?v=46';
+} from './store.js?v=64';
+import { getUser } from './supabase.js?v=64';
+import { downloadWeekIcs } from './ics.js?v=64';
 
 const DAYS_SV = ['Måndag', 'Tisdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lördag', 'Söndag'];
 const MONTHS_SV = ['januari', 'februari', 'mars', 'april', 'maj', 'juni',
@@ -128,8 +128,10 @@ export function renderMySchedule() {
             const customer = getCustomer(job.customerId);
             const custName = customer?.name || 'Okänd kund';
             const custAddr = customer?.address || '';
+            const cancelledClass = job.isCancelled ? ' my-job-cancelled' : '';
 
-            html += `<div class="my-job-card" style="border-left: 4px solid ${colorObj.color}; background: ${colorObj.bg}">
+            html += `<div class="my-job-card${cancelledClass}" style="border-left: 4px solid ${job.isCancelled ? 'var(--text-muted)' : colorObj.color}; background: ${job.isCancelled ? 'var(--bg-hover)' : colorObj.bg}">
+                ${job.isCancelled ? '<div class="my-job-cancelled-badge">🚫 Inställd</div>' : ''}
                 <div class="my-job-customer">${escHtml(custName)}</div>
                 ${custAddr ? `<div class="my-job-address">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -155,9 +157,10 @@ export function renderMySchedule() {
 
     html += '</div>';
 
-    // Week summary
-    const totalJobs = myJobs.length;
-    const totalHours = myJobs.reduce((s, j) => s + parseHours(j.hours), 0);
+    // Week summary (exclude cancelled)
+    const activeJobs = myJobs.filter(j => !j.isCancelled);
+    const totalJobs = activeJobs.length;
+    const totalHours = activeJobs.reduce((s, j) => s + parseHours(j.hours), 0);
 
     html += `<div class="my-week-summary">
         <div class="my-summary-stat">

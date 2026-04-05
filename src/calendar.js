@@ -5,11 +5,13 @@
 import {
     getEmployees, getCustomers, getEmployee, getCustomer,
     getJobOccurrencesForWeek, getUnscheduledJobs, addJob, updateJob, deleteJob,
-    EMPLOYEE_COLORS, isEmployeeOffOnDate
-} from './store.js?v=46';
-import { openModal, closeModal } from './modals.js?v=46';
-import { downloadWeekIcs } from './ics.js?v=46';
-import { getUser } from './supabase.js?v=46';
+    EMPLOYEE_COLORS, isEmployeeOffOnDate,
+    addJobException, deleteJobExceptionByDateAndType, isOccurrenceCancelled,
+    stopRecurringFromDate, splitRecurringJob
+} from './store.js?v=64';
+import { openModal, closeModal } from './modals.js?v=64';
+import { downloadWeekIcs } from './ics.js?v=64';
+import { getUser } from './supabase.js?v=64';
 
 /** Parse a numeric hours value that may use comma as decimal separator */
 function parseHours(val) {
@@ -163,8 +165,8 @@ export function renderCalendar() {
     for (const emp of employees) {
         const colorObj = EMPLOYEE_COLORS.find(c => c.id === emp.color) || EMPLOYEE_COLORS[0];
 
-        // Calculate weekly hours for this employee
-        const empJobs = occurrences.filter(j => j.employeeId === emp.id);
+        // Calculate weekly hours for this employee (exclude cancelled)
+        const empJobs = occurrences.filter(j => j.employeeId === emp.id && !j.isCancelled);
         const weeklyHours = empJobs.reduce((sum, j) => sum + parseHours(j.hours), 0);
 
         html += '<div class="grid-row">';
@@ -198,14 +200,18 @@ export function renderCalendar() {
             for (const job of dayJobs) {
                 const customer = getCustomer(job.customerId);
                 const custName = customer ? customer.name : 'Okänd kund';
-                html += `<div class="job-block" 
+                const cancelledClass = job.isCancelled ? ' job-cancelled' : '';
+                html += `<div class="job-block${cancelledClass}" 
                               style="background: ${colorObj.bg}; border-color: ${colorObj.color}"
                               data-job-id="${job.id}"
-                              title="${escHtml(custName)}${job.hours ? ' — ' + fmtHours(job.hours) + 'h' : ''}">
+                              data-occurrence-date="${job.occurrenceDate}"
+                              data-is-recurring="${job.isRecurring ? '1' : '0'}"
+                              title="${escHtml(custName)}${job.hours ? ' — ' + fmtHours(job.hours) + 'h' : ''}${job.isCancelled ? ' (Inställd)' : ''}">
                     <div class="job-customer">${escHtml(custName)}</div>
                     <div class="job-time">
                         ${job.startTime || ''}${job.hours ? ' · ' + fmtHours(job.hours) + 'h' : ''}
                         ${(job.isRecurring || (job.recurring && job.recurring !== 'none')) ? '<span class="recurring-badge">🔄</span>' : ''}
+                        ${job.isCancelled ? '<span class="cancelled-badge">Inställd</span>' : ''}
                     </div>
                 </div>`;
             }
@@ -272,9 +278,23 @@ export function renderCalendar() {
         if (cell) {
             const newEmployeeId = cell.dataset.employee;
             const newDate = cell.dataset.date;
+            const jobId = dragState.jobId;
+            const block = dragState.originBlock;
+            const isRecurring = block.dataset.isRecurring === '1';
+            const occurrenceDate = block.dataset.occurrenceDate;
+
             if (newEmployeeId && newDate) {
-                await updateJob(dragState.jobId, { employeeId: newEmployeeId, date: newDate });
-                renderCalendar();
+                const job = occurrences.find(j => j.id === jobId && j.occurrenceDate === occurrenceDate);
+                const employeeChanged = job && newEmployeeId !== job.employeeId;
+                const dateChanged = job && newDate !== occurrenceDate;
+
+                if (isRecurring && (employeeChanged || dateChanged)) {
+                    // Show recurring action dialog
+                    showRecurringDragDialog(jobId, occurrenceDate, newEmployeeId, newDate, employeeChanged, dateChanged, job);
+                } else {
+                    await updateJob(jobId, { employeeId: newEmployeeId, date: newDate });
+                    renderCalendar();
+                }
             }
         }
 
@@ -324,15 +344,17 @@ export function renderCalendar() {
             // Only open edit if it was a quick click (not a drag)
             if (Date.now() - mouseDownTime < 300) {
                 const jobId = block.dataset.jobId;
-                const job = occurrences.find(j => j.id === jobId);
-                if (job) showJobForm(job);
+                const occDate = block.dataset.occurrenceDate;
+                const isRec = block.dataset.isRecurring === '1';
+                const job = occurrences.find(j => j.id === jobId && j.occurrenceDate === occDate);
+                if (job) showJobForm(job, '', '', isRec, occDate);
             }
         });
     });
     renderDayTimeline();
 }
 
-function showJobForm(existing = null, prefillEmployee = '', prefillDate = '') {
+function showJobForm(existing = null, prefillEmployee = '', prefillDate = '', isRecurringOccurrence = false, occurrenceDate = '') {
     const isEdit = !!existing;
     const employees = getEmployees();
     const customers = getCustomers();
@@ -356,6 +378,9 @@ function showJobForm(existing = null, prefillEmployee = '', prefillDate = '') {
     ).join('');
 
     const dateValue = existing?.date || prefillDate || formatDate(new Date());
+    const isRecurringJob = isEdit && existing?.recurring && existing.recurring !== 'none';
+    const effectiveCancelDate = occurrenceDate || existing?.occurrenceDate || dateValue;
+    const isCancelled = isRecurringJob && isOccurrenceCancelled(existing.id, effectiveCancelDate);
 
     openModal({
         title: isEdit ? 'Redigera jobb' : 'Nytt jobb',
@@ -401,12 +426,31 @@ function showJobForm(existing = null, prefillEmployee = '', prefillDate = '') {
             </div>
         `,
         footer: `
-            ${isEdit ? '<button class="btn-danger" id="modal-delete">Ta bort</button>' : ''}
+            ${isEdit ? `<button class="btn-danger" id="modal-delete">${isRecurringOccurrence ? 'Ta bort alla framtida' : 'Ta bort'}</button>` : ''}
+            ${isRecurringJob ? `<button class="btn-warning" id="modal-toggle-cancel" style="background:${isCancelled ? 'var(--success)' : '#e67e22'};color:#fff;border:none;padding:8px 14px;border-radius:8px;font-size:0.85rem;cursor:pointer;">${isCancelled ? '✅ Återaktivera' : '🚫 Ställ in idag'}</button>` : ''}
             <div style="flex:1"></div>
             <button class="btn-ghost" id="modal-cancel">Avbryt</button>
             <button class="btn-primary" id="modal-save">${isEdit ? 'Spara' : 'Lägg till'}</button>
         `,
     });
+
+    // --- Cancel/Uncancel button toggle ---
+    const toggleCancelBtn = document.getElementById('modal-toggle-cancel');
+    if (toggleCancelBtn) {
+        toggleCancelBtn.addEventListener('click', async () => {
+            try {
+                if (isCancelled) {
+                    await deleteJobExceptionByDateAndType(existing.id, effectiveCancelDate, 'cancelled');
+                } else {
+                    await addJobException({ jobId: existing.id, exceptionDate: effectiveCancelDate, type: 'cancelled' });
+                }
+                closeModal();
+                renderCalendar();
+            } catch (err) {
+                alert('Kunde inte spara: ' + err.message);
+            }
+        });
+    }
 
     // Auto-fill hours from customer estimate when customer changes
     const custSelect = document.getElementById('job-customer');
@@ -427,13 +471,26 @@ function showJobForm(existing = null, prefillEmployee = '', prefillDate = '') {
 
     if (isEdit) {
         document.getElementById('modal-delete').addEventListener('click', async () => {
-            if (confirm('Är du säker på att du vill ta bort detta jobb?')) {
-                await deleteJob(existing.id);
-                closeModal();
-                renderCalendar();
+            if (isRecurringOccurrence) {
+                // Recurring: stop the series from this date forward
+                if (confirm('Ta bort detta jobb och alla framtida förekomster? Historiska förekomster bevaras.')) {
+                    await stopRecurringFromDate(existing.id, occurrenceDate);
+                    closeModal();
+                    renderCalendar();
+                }
+            } else {
+                if (confirm('Är du säker på att du vill ta bort detta jobb?')) {
+                    await deleteJob(existing.id);
+                    closeModal();
+                    renderCalendar();
+                }
             }
         });
     }
+
+    // Track original values for change detection
+    const originalEmployeeId = existing?.employeeId || '';
+    const originalRecurring = existing?.recurring || 'none';
 
     document.getElementById('modal-save').addEventListener('click', async () => {
         const jobData = {
@@ -452,6 +509,61 @@ function showJobForm(existing = null, prefillEmployee = '', prefillDate = '') {
         }
 
         if (isEdit) {
+            const employeeChanged = jobData.employeeId !== originalEmployeeId;
+            const recurringChanged = jobData.recurring !== originalRecurring;
+            const needsSplit = employeeChanged || recurringChanged;
+
+            if (isRecurringOccurrence && needsSplit) {
+                // Ask: just this day or all future?
+                closeModal();
+                const title = employeeChanged ? 'Ändra anställd' : 'Ändra frekvens';
+                const msg = employeeChanged
+                    ? 'Vill du ändra anställd bara för denna dag eller för alla framtida förekomster?'
+                    : 'Vill du ändra frekvens bara från denna dag framåt? Historiska förekomster bevaras.';
+
+                if (employeeChanged && !recurringChanged) {
+                    // Employee change only — offer "this day" vs "all future"
+                    showRecurringActionDialog(title, msg,
+                        async () => {
+                            // This day only → employee override exception
+                            await addJobException({
+                                jobId: existing.id,
+                                exceptionDate: occurrenceDate,
+                                type: 'employee_override',
+                                overrideEmployeeId: jobData.employeeId,
+                            });
+                            renderCalendar();
+                        },
+                        async () => {
+                            // All future → split series
+                            await splitRecurringJob(existing.id, occurrenceDate, { employeeId: jobData.employeeId });
+                            renderCalendar();
+                        }
+                    );
+                } else {
+                    // Frequency change (possibly with employee change too) → split series
+                    showRecurringActionDialog(title, msg,
+                        async () => {
+                            // "This day" for frequency change = split from this date
+                            await splitRecurringJob(existing.id, occurrenceDate, {
+                                employeeId: jobData.employeeId,
+                                recurring: jobData.recurring,
+                            });
+                            renderCalendar();
+                        },
+                        async () => {
+                            // "All future" = same: split from this date
+                            await splitRecurringJob(existing.id, occurrenceDate, {
+                                employeeId: jobData.employeeId,
+                                recurring: jobData.recurring,
+                            });
+                            renderCalendar();
+                        }
+                    );
+                }
+                return;
+            }
+
             await updateJob(existing.id, jobData);
         } else {
             await addJob(jobData);
@@ -461,6 +573,82 @@ function showJobForm(existing = null, prefillEmployee = '', prefillDate = '') {
         renderCalendar();
         renderUnscheduledPanel();
     });
+}
+
+/** Generic "this day vs all future" action dialog */
+function showRecurringActionDialog(title, message, onThisDay, onAllFuture) {
+    openModal({
+        title,
+        body: `<p style="margin-bottom:8px">${message}</p>
+               <p style="font-size:0.82rem;color:var(--text-muted)">Historiska förekomster påverkas inte.</p>`,
+        footer: `
+            <button class="btn-ghost" id="modal-cancel">Avbryt</button>
+            <button class="btn-secondary" id="modal-this-day">Bara denna dag</button>
+            <button class="btn-primary" id="modal-all-future">Alla framtida</button>
+        `,
+    });
+
+    document.getElementById('modal-cancel').addEventListener('click', closeModal);
+    document.getElementById('modal-this-day').addEventListener('click', async () => {
+        closeModal();
+        await onThisDay();
+    });
+    document.getElementById('modal-all-future').addEventListener('click', async () => {
+        closeModal();
+        await onAllFuture();
+    });
+}
+
+/** Handle drag-drop of a recurring occurrence */
+function showRecurringDragDialog(jobId, occurrenceDate, newEmployeeId, newDate, employeeChanged, dateChanged, job) {
+    if (dateChanged) {
+        // Moving to a different date → always create a one-off + cancel original occurrence
+        showRecurringActionDialog(
+            'Flytta återkommande jobb',
+            'Vill du flytta bara denna förekomst eller alla framtida?',
+            async () => {
+                // This day only → cancel old + create new one-off
+                await addJobException({ jobId, exceptionDate: occurrenceDate, type: 'cancelled' });
+                await addJob({
+                    customerId: job.customerId,
+                    employeeId: newEmployeeId,
+                    date: newDate,
+                    startTime: job.startTime,
+                    hours: job.hours,
+                    recurring: 'none',
+                    notes: job.notes,
+                });
+                renderCalendar();
+                renderUnscheduledPanel();
+            },
+            async () => {
+                // All future → split series with new employee + date
+                await splitRecurringJob(jobId, occurrenceDate, { employeeId: newEmployeeId });
+                renderCalendar();
+            }
+        );
+    } else if (employeeChanged) {
+        // Same date, different employee
+        showRecurringActionDialog(
+            'Ändra anställd',
+            'Vill du ändra anställd bara för denna dag eller för alla framtida förekomster?',
+            async () => {
+                // This day only → employee override
+                await addJobException({
+                    jobId,
+                    exceptionDate: occurrenceDate,
+                    type: 'employee_override',
+                    overrideEmployeeId: newEmployeeId,
+                });
+                renderCalendar();
+            },
+            async () => {
+                // All future → split series
+                await splitRecurringJob(jobId, occurrenceDate, { employeeId: newEmployeeId });
+                renderCalendar();
+            }
+        );
+    }
 }
 
 // --- Unscheduled Jobs Panel ---
