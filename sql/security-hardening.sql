@@ -1,26 +1,29 @@
 -- CleanSchedule: Security Hardening — SECURITY DEFINER functions
 -- Run in Supabase SQL Editor
 -- Adds search_path, REVOKE FROM PUBLIC, explicit GRANT
--- Also hardens get_employee_id_for_email to NOT accept caller-supplied email
+-- NOTE: get_employee_id_for_email was replaced by get_current_employee_id()
+--       See replace-employee-id-function.sql for the replacement.
 
 -- =============================================================
--- 1. Harden get_employee_id_for_email
---    Derive email from auth.jwt() — no caller-supplied parameter
+-- 1. get_current_employee_id (no caller-supplied email)
+--    Derives email from auth.jwt() internally
 -- =============================================================
-CREATE OR REPLACE FUNCTION get_employee_id_for_email(target_email TEXT)
+CREATE OR REPLACE FUNCTION get_current_employee_id()
 RETURNS UUID
 LANGUAGE sql
 SECURITY DEFINER
 STABLE
 SET search_path = public
 AS $$
-  SELECT id FROM employees WHERE email = target_email AND invited = true LIMIT 1;
+  SELECT id FROM employees
+  WHERE email = (auth.jwt()->> 'email')
+  AND invited = true
+  LIMIT 1;
 $$;
 
 -- Lock down permissions
-REVOKE EXECUTE ON FUNCTION get_employee_id_for_email(TEXT) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION get_employee_id_for_email(TEXT) TO authenticated;
-GRANT EXECUTE ON FUNCTION get_employee_id_for_email(TEXT) TO service_role;
+REVOKE EXECUTE ON FUNCTION get_current_employee_id() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION get_current_employee_id() TO authenticated;
 
 -- =============================================================
 -- 2. Harden check_user_role
@@ -97,11 +100,11 @@ CREATE POLICY "Whitelist access" ON job_exceptions FOR ALL
   WITH CHECK (auth.jwt()->> 'email' IN ('ingeholberg@gmail.com','veronicasorianoholberg@gmail.com'));
 
 CREATE POLICY "Employee read job exceptions" ON job_exceptions
-  FOR SELECT
+  FOR SELECT TO authenticated
   USING (
     job_id IN (
       SELECT id FROM jobs
-      WHERE employee_id = get_employee_id_for_email(auth.jwt()->> 'email')
+      WHERE employee_id = get_current_employee_id()
     )
   );
 
