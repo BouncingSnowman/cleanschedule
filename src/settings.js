@@ -2,10 +2,10 @@
  * Veckoplan — Settings (Notification Preferences)
  */
 
-import { getUser, dbGetSetting, dbSetSetting, dbDeleteSetting } from './supabase.js?v=72';
+import { getUser, dbGetSetting, dbSetSetting, dbDeleteSetting } from './supabase.js?v=74';
 import {
     dbGetSubscription, dbUpsertSubscription, dbUpdateSubscriptionPrefs
-} from './supabase.js?v=72';
+} from './supabase.js?v=74';
 
 const VAPID_PUBLIC_KEY = 'BJC_-JfmMRGUnnkfibR52IGARups1q-t-jOGLee8FoA8G_oHH-v9QNf3PrqGrmz_gVWCLAzwSZN8A1gd72q4E_c';
 
@@ -332,11 +332,12 @@ export function injectChatbotScript(configStr) {
     // Provider templates — each generates a script with a known CDN URL
     const PROVIDERS = {
         clientrelay: (id) => {
-            const iframe = document.createElement('iframe');
-            iframe.src = `https://clientrelay.tech/chatbot/${id}`;
-            iframe.setAttribute('data-chatbot-inject', '1');
-            iframe.style.cssText = 'position:fixed;bottom:20px;right:20px;width:400px;height:600px;border:none;z-index:9999;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.15);';
-            document.body.appendChild(iframe);
+            const el = document.createElement('script');
+            el.src = 'https://clientrelay.tech/widget/chatbot.js';
+            el.setAttribute('data-client', id);
+            el.setAttribute('data-chatbot-inject', '1');
+            el.defer = true;
+            document.head.appendChild(el);
         },
         chatbase: (id) => {
             const el = document.createElement('script');

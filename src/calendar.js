@@ -8,10 +8,10 @@ import {
     EMPLOYEE_COLORS, isEmployeeOffOnDate,
     addJobException, deleteJobExceptionByDateAndType, isOccurrenceCancelled,
     stopRecurringFromDate, splitRecurringJob
-} from './store.js?v=72';
-import { openModal, closeModal } from './modals.js?v=72';
-import { downloadWeekIcs } from './ics.js?v=72';
-import { getUser } from './supabase.js?v=72';
+} from './store.js?v=74';
+import { openModal, closeModal } from './modals.js?v=74';
+import { downloadWeekIcs } from './ics.js?v=74';
+import { getUser } from './supabase.js?v=74';
 
 /** Parse a numeric hours value that may use comma as decimal separator */
 function parseHours(val) {

@@ -2,18 +2,18 @@
  * CleanSchedule — Main Entry Point (with Auth)
  */
 
-import { restoreSession, isLoggedIn, signOut, handleOAuthCallback, getUser, resolveUserRole, isAdmin, isEmployee, getUserRole, dbGetSetting } from './supabase.js?v=72';
-import { initAuth, renderAuthView, renderAccessDenied } from './auth.js?v=72';
-import { loadAllData, getUnscheduledJobs } from './store.js?v=72';
-import { initCalendar, renderCalendar, renderUnscheduledPanel } from './calendar.js?v=72';
-import { initEmployees, renderEmployees } from './employees.js?v=72';
-import { initCustomers, renderCustomers } from './customers.js?v=72';
-import { initDashboard, renderDashboard } from './dashboard.js?v=72';
-import { initSettings, renderSettings, injectChatbotScript } from './settings.js?v=72';
-import { initMySchedule, renderMySchedule } from './my-schedule.js?v=72';
-import { exportData, importData, importCustomersFromCsv } from './store.js?v=72';
+import { restoreSession, isLoggedIn, signOut, handleOAuthCallback, getUser, resolveUserRole, isAdmin, isEmployee, getUserRole, dbGetSetting } from './supabase.js?v=74';
+import { initAuth, renderAuthView, renderAccessDenied } from './auth.js?v=74';
+import { loadAllData, getUnscheduledJobs } from './store.js?v=74';
+import { initCalendar, renderCalendar, renderUnscheduledPanel } from './calendar.js?v=74';
+import { initEmployees, renderEmployees } from './employees.js?v=74';
+import { initCustomers, renderCustomers } from './customers.js?v=74';
+import { initDashboard, renderDashboard } from './dashboard.js?v=74';
+import { initSettings, renderSettings, injectChatbotScript } from './settings.js?v=74';
+import { initMySchedule, renderMySchedule } from './my-schedule.js?v=74';
+import { exportData, importData, importCustomersFromCsv } from './store.js?v=74';
 
-const APP_VERSION = '1.0.72';
+const APP_VERSION = '1.0.74';
 
 document.addEventListener('DOMContentLoaded', async () => {
     initAuth(onLoginSuccess);

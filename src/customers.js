@@ -2,8 +2,8 @@
  * CleanSchedule — Customer Management UI
  */
 
-import { getCustomers, addCustomer, updateCustomer, deleteCustomer, getJobs, getEmployees, EMPLOYEE_COLORS } from './store.js?v=72';
-import { openModal, closeModal } from './modals.js?v=72';
+import { getCustomers, addCustomer, updateCustomer, deleteCustomer, getJobs, getEmployees, EMPLOYEE_COLORS } from './store.js?v=74';
+import { openModal, closeModal } from './modals.js?v=74';
 
 let onChangeCallback = null;
 

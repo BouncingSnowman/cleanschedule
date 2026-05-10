@@ -2,8 +2,8 @@
  * CleanSchedule — Employee Management UI
  */
 
-import { getEmployees, addEmployee, updateEmployee, deleteEmployee, EMPLOYEE_COLORS, getTimeOffForEmployee, addTimeOff, deleteTimeOff, toLocalDateStr, getJobs } from './store.js?v=72';
-import { openModal, closeModal } from './modals.js?v=72';
+import { getEmployees, addEmployee, updateEmployee, deleteEmployee, EMPLOYEE_COLORS, getTimeOffForEmployee, addTimeOff, deleteTimeOff, toLocalDateStr, getJobs } from './store.js?v=74';
+import { openModal, closeModal } from './modals.js?v=74';
 
 let onChangeCallback = null;
 
