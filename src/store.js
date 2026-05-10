@@ -4,7 +4,7 @@
  * All write operations persist to Supabase and update local cache.
  */
 
-import { dbSelect, dbInsert, dbUpdate, dbDelete, isLoggedIn, getAccessToken } from './supabase.js?v=71';
+import { dbSelect, dbInsert, dbUpdate, dbDelete, isLoggedIn, getAccessToken } from './supabase.js?v=72';
 
 const SUPABASE_URL = 'https://cywcnyimlhiwbbqqzvoe.supabase.co';
 

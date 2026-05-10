@@ -5,7 +5,7 @@
 import {
     getEmployees, getCustomers, getJobs, getUnscheduledJobs,
     getJobOccurrencesForWeek, EMPLOYEE_COLORS, toLocalDateStr
-} from './store.js?v=71';
+} from './store.js?v=72';
 
 function parseHours(val) {
     if (!val && val !== 0) return 0;

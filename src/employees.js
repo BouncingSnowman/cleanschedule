@@ -2,8 +2,8 @@
  * CleanSchedule — Employee Management UI
  */
 
-import { getEmployees, addEmployee, updateEmployee, deleteEmployee, EMPLOYEE_COLORS, getTimeOffForEmployee, addTimeOff, deleteTimeOff, toLocalDateStr, getJobs } from './store.js?v=71';
-import { openModal, closeModal } from './modals.js?v=71';
+import { getEmployees, addEmployee, updateEmployee, deleteEmployee, EMPLOYEE_COLORS, getTimeOffForEmployee, addTimeOff, deleteTimeOff, toLocalDateStr, getJobs } from './store.js?v=72';
+import { openModal, closeModal } from './modals.js?v=72';
 
 let onChangeCallback = null;
 
@@ -103,7 +103,7 @@ function showEmployeeForm(existing = null) {
         body: `
             <div class="form-group">
                 <label for="emp-name">Namn *</label>
-                <input type="text" id="emp-name" class="form-input" placeholder="T.ex. Cajsa" value="${existing ? escHtml(existing.name) : ''}" required>
+                <input type="text" id="emp-name" class="form-input" placeholder="T.ex. Cajsa" required>
             </div>
             <div class="form-row">
                 <div class="form-group">
@@ -115,22 +115,22 @@ function showEmployeeForm(existing = null) {
                 </div>
                 <div class="form-group" id="emp-hours-group" style="${existing?.type === 'contractor' ? 'display:none' : ''}">
                     <label for="emp-hours">Tim/vecka</label>
-                    <input type="text" inputmode="decimal" id="emp-hours" class="form-input" placeholder="40" value="${existing?.defaultHours ? String(existing.defaultHours).replace('.', ',') : ''}">
+                    <input type="text" inputmode="decimal" id="emp-hours" class="form-input" placeholder="40">
                 </div>
             </div>
             <div class="form-row">
                 <div class="form-group">
                     <label for="emp-phone">Telefon</label>
-                    <input type="tel" id="emp-phone" class="form-input" placeholder="070-123 4567" value="${escHtml(existing?.phone || '')}">
+                    <input type="tel" id="emp-phone" class="form-input" placeholder="070-123 4567">
                 </div>
                 <div class="form-group">
                     <label for="emp-email">E-post</label>
-                    <input type="email" id="emp-email" class="form-input" placeholder="namn@exempel.se" value="${escHtml(existing?.email || '')}">
+                    <input type="email" id="emp-email" class="form-input" placeholder="namn@exempel.se">
                 </div>
             </div>
             <div class="form-group">
                 <label for="emp-notes">Anteckningar</label>
-                <textarea id="emp-notes" class="form-input" placeholder="T.ex. körkort, allergier, tillgänglighet...">${escHtml(existing?.notes || '')}</textarea>
+                <textarea id="emp-notes" class="form-input" placeholder="T.ex. körkort, allergier, tillgänglighet..."></textarea>
             </div>
             <div class="form-group">
                 <label>Färg</label>
@@ -161,6 +161,15 @@ function showEmployeeForm(existing = null) {
             <button class="btn-primary" id="modal-save">${isEdit ? 'Spara' : 'Lägg till'}</button>
         `,
     });
+
+    // Populate values via DOM (safe — no HTML attribute escaping needed)
+    if (existing) {
+        document.getElementById('emp-name').value = existing.name || '';
+        document.getElementById('emp-hours').value = existing.defaultHours ? String(existing.defaultHours).replace('.', ',') : '';
+        document.getElementById('emp-phone').value = existing.phone || '';
+        document.getElementById('emp-email').value = existing.email || '';
+        document.getElementById('emp-notes').value = existing.notes || '';
+    }
 
     // Color picker logic
     let chosenColor = selectedColor;

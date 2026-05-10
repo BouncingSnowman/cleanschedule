@@ -2,8 +2,8 @@
  * CleanSchedule — Customer Management UI
  */
 
-import { getCustomers, addCustomer, updateCustomer, deleteCustomer, getJobs, getEmployees, EMPLOYEE_COLORS } from './store.js?v=71';
-import { openModal, closeModal } from './modals.js?v=71';
+import { getCustomers, addCustomer, updateCustomer, deleteCustomer, getJobs, getEmployees, EMPLOYEE_COLORS } from './store.js?v=72';
+import { openModal, closeModal } from './modals.js?v=72';
 
 let onChangeCallback = null;
 
@@ -121,29 +121,29 @@ function showCustomerForm(existing = null) {
         body: `
             <div class="form-group">
                 <label for="cust-name">Namn *</label>
-                <input type="text" id="cust-name" class="form-input" placeholder="T.ex. Familjen Andersson" value="${existing ? escHtml(existing.name) : ''}" required>
+                <input type="text" id="cust-name" class="form-input" placeholder="T.ex. Familjen Andersson" required>
             </div>
             <div class="form-group">
                 <label for="cust-address">Adress</label>
-                <input type="text" id="cust-address" class="form-input" placeholder="Storgatan 12, 123 45 Stockholm" value="${escHtml(existing?.address || '')}">
+                <input type="text" id="cust-address" class="form-input" placeholder="Storgatan 12, 123 45 Stockholm">
             </div>
             <div class="form-row">
                 <div class="form-group">
                     <label for="cust-phone">Telefon</label>
-                    <input type="tel" id="cust-phone" class="form-input" placeholder="070-123 4567" value="${escHtml(existing?.phone || '')}">
+                    <input type="tel" id="cust-phone" class="form-input" placeholder="070-123 4567">
                 </div>
                 <div class="form-group">
                     <label for="cust-email">E-post</label>
-                    <input type="email" id="cust-email" class="form-input" placeholder="namn@exempel.se" value="${escHtml(existing?.email || '')}">
+                    <input type="email" id="cust-email" class="form-input" placeholder="namn@exempel.se">
                 </div>
             </div>
             <div class="form-group">
                 <label for="cust-notes">Anteckningar</label>
-                <textarea id="cust-notes" class="form-input" placeholder="T.ex. portkod, husdjur, specialinstruktioner...">${escHtml(existing?.notes || '')}</textarea>
+                <textarea id="cust-notes" class="form-input" placeholder="T.ex. portkod, husdjur, specialinstruktioner..."></textarea>
             </div>
             <div class="form-group">
                 <label for="cust-est-hours">Uppskattat antal timmar</label>
-                <input type="text" inputmode="decimal" id="cust-est-hours" class="form-input" placeholder="2,5" value="${existing?.estimatedHours ? String(existing.estimatedHours).replace('.', ',') : ''}">
+                <input type="text" inputmode="decimal" id="cust-est-hours" class="form-input" placeholder="2,5">
             </div>
         `,
         footer: `
@@ -151,6 +151,16 @@ function showCustomerForm(existing = null) {
             <button class="btn-primary" id="modal-save">${isEdit ? 'Spara' : 'Lägg till'}</button>
         `,
     });
+
+    // Populate values via DOM (safe — no HTML attribute escaping needed)
+    if (existing) {
+        document.getElementById('cust-name').value = existing.name || '';
+        document.getElementById('cust-address').value = existing.address || '';
+        document.getElementById('cust-phone').value = existing.phone || '';
+        document.getElementById('cust-email').value = existing.email || '';
+        document.getElementById('cust-notes').value = existing.notes || '';
+        document.getElementById('cust-est-hours').value = existing.estimatedHours ? String(existing.estimatedHours).replace('.', ',') : '';
+    }
 
     document.getElementById('modal-cancel').addEventListener('click', closeModal);
     document.getElementById('modal-save').addEventListener('click', async () => {

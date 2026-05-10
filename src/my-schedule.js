@@ -7,9 +7,9 @@ import {
     getEmployees, getCustomers, getEmployee, getCustomer,
     getJobOccurrencesForWeek, getTimeOffForEmployee,
     isEmployeeOffOnDate, EMPLOYEE_COLORS, toLocalDateStr
-} from './store.js?v=71';
-import { getUser } from './supabase.js?v=71';
-import { downloadWeekIcs } from './ics.js?v=71';
+} from './store.js?v=72';
+import { getUser } from './supabase.js?v=72';
+import { downloadWeekIcs } from './ics.js?v=72';
 
 const DAYS_SV = ['Måndag', 'Tisdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lördag', 'Söndag'];
 const MONTHS_SV = ['januari', 'februari', 'mars', 'april', 'maj', 'juni',

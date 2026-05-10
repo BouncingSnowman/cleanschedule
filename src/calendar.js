@@ -8,10 +8,10 @@ import {
     EMPLOYEE_COLORS, isEmployeeOffOnDate,
     addJobException, deleteJobExceptionByDateAndType, isOccurrenceCancelled,
     stopRecurringFromDate, splitRecurringJob
-} from './store.js?v=71';
-import { openModal, closeModal } from './modals.js?v=71';
-import { downloadWeekIcs } from './ics.js?v=71';
-import { getUser } from './supabase.js?v=71';
+} from './store.js?v=72';
+import { openModal, closeModal } from './modals.js?v=72';
+import { downloadWeekIcs } from './ics.js?v=72';
+import { getUser } from './supabase.js?v=72';
 
 /** Parse a numeric hours value that may use comma as decimal separator */
 function parseHours(val) {
@@ -422,7 +422,7 @@ function showJobForm(existing = null, prefillEmployee = '', prefillDate = '', is
             </div>
             <div class="form-group">
                 <label for="job-notes">Anteckningar</label>
-                <textarea id="job-notes" class="form-input" placeholder="Särskilda instruktioner...">${escHtml(existing?.notes || '')}</textarea>
+                <textarea id="job-notes" class="form-input" placeholder="Särskilda instruktioner..."></textarea>
             </div>
         `,
         footer: `
@@ -433,6 +433,9 @@ function showJobForm(existing = null, prefillEmployee = '', prefillDate = '', is
             <button class="btn-primary" id="modal-save">${isEdit ? 'Spara' : 'Lägg till'}</button>
         `,
     });
+
+    // Populate textarea via DOM (safe)
+    if (existing?.notes) document.getElementById('job-notes').value = existing.notes;
 
     // --- Cancel/Uncancel button toggle ---
     const toggleCancelBtn = document.getElementById('modal-toggle-cancel');
@@ -909,11 +912,11 @@ function showEditUnscheduledForm(jobId) {
             </div>
             <div class="form-group">
                 <label for="edit-unsched-hours">Antal timmar</label>
-                <input type="text" inputmode="decimal" id="edit-unsched-hours" class="form-input" value="${job.hours ? fmtHours(job.hours) : ''}">
+                <input type="text" inputmode="decimal" id="edit-unsched-hours" class="form-input">
             </div>
             <div class="form-group">
                 <label for="edit-unsched-notes">Anteckningar</label>
-                <textarea id="edit-unsched-notes" class="form-input">${escHtml(job.notes || '')}</textarea>
+                <textarea id="edit-unsched-notes" class="form-input"></textarea>
             </div>
         `,
         footer: `
@@ -922,6 +925,10 @@ function showEditUnscheduledForm(jobId) {
             <button class="btn-primary" id="modal-save">Spara</button>
         `,
     });
+
+    // Populate via DOM (safe)
+    document.getElementById('edit-unsched-hours').value = job.hours ? fmtHours(job.hours) : '';
+    document.getElementById('edit-unsched-notes').value = job.notes || '';
 
     document.getElementById('modal-cancel').addEventListener('click', closeModal);
 
