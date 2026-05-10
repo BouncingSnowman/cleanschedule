@@ -2,8 +2,8 @@
  * CleanSchedule — Employee Management UI
  */
 
-import { getEmployees, addEmployee, updateEmployee, deleteEmployee, EMPLOYEE_COLORS, getTimeOffForEmployee, addTimeOff, deleteTimeOff, toLocalDateStr, getJobs } from './store.js?v=64';
-import { openModal, closeModal } from './modals.js?v=64';
+import { getEmployees, addEmployee, updateEmployee, deleteEmployee, EMPLOYEE_COLORS, getTimeOffForEmployee, addTimeOff, deleteTimeOff, toLocalDateStr, getJobs } from './store.js?v=71';
+import { openModal, closeModal } from './modals.js?v=71';
 
 let onChangeCallback = null;
 
@@ -121,16 +121,16 @@ function showEmployeeForm(existing = null) {
             <div class="form-row">
                 <div class="form-group">
                     <label for="emp-phone">Telefon</label>
-                    <input type="tel" id="emp-phone" class="form-input" placeholder="070-123 4567" value="${existing?.phone || ''}">
+                    <input type="tel" id="emp-phone" class="form-input" placeholder="070-123 4567" value="${escHtml(existing?.phone || '')}">
                 </div>
                 <div class="form-group">
                     <label for="emp-email">E-post</label>
-                    <input type="email" id="emp-email" class="form-input" placeholder="namn@exempel.se" value="${existing?.email || ''}">
+                    <input type="email" id="emp-email" class="form-input" placeholder="namn@exempel.se" value="${escHtml(existing?.email || '')}">
                 </div>
             </div>
             <div class="form-group">
                 <label for="emp-notes">Anteckningar</label>
-                <textarea id="emp-notes" class="form-input" placeholder="T.ex. körkort, allergier, tillgänglighet...">${existing?.notes || ''}</textarea>
+                <textarea id="emp-notes" class="form-input" placeholder="T.ex. körkort, allergier, tillgänglighet...">${escHtml(existing?.notes || '')}</textarea>
             </div>
             <div class="form-group">
                 <label>Färg</label>

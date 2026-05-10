@@ -4,16 +4,21 @@
  * All write operations persist to Supabase and update local cache.
  */
 
-import { dbSelect, dbInsert, dbUpdate, dbDelete, isLoggedIn } from './supabase.js?v=64';
+import { dbSelect, dbInsert, dbUpdate, dbDelete, isLoggedIn, getAccessToken } from './supabase.js?v=71';
 
 const SUPABASE_URL = 'https://cywcnyimlhiwbbqqzvoe.supabase.co';
 
 /** Fire-and-forget push notification via Edge Function */
 async function sendPush(type, employeeEmail, title, body) {
     try {
+        const token = getAccessToken();
+        if (!token) return; // Not logged in — skip silently
         await fetch(`${SUPABASE_URL}/functions/v1/send-push`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+            },
             body: JSON.stringify({ type, employee_email: employeeEmail, title, body }),
         });
     } catch (e) {

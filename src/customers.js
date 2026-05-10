@@ -2,8 +2,8 @@
  * CleanSchedule — Customer Management UI
  */
 
-import { getCustomers, addCustomer, updateCustomer, deleteCustomer, getJobs, getEmployees, EMPLOYEE_COLORS } from './store.js?v=64';
-import { openModal, closeModal } from './modals.js?v=64';
+import { getCustomers, addCustomer, updateCustomer, deleteCustomer, getJobs, getEmployees, EMPLOYEE_COLORS } from './store.js?v=71';
+import { openModal, closeModal } from './modals.js?v=71';
 
 let onChangeCallback = null;
 
@@ -125,21 +125,21 @@ function showCustomerForm(existing = null) {
             </div>
             <div class="form-group">
                 <label for="cust-address">Adress</label>
-                <input type="text" id="cust-address" class="form-input" placeholder="Storgatan 12, 123 45 Stockholm" value="${existing?.address || ''}">
+                <input type="text" id="cust-address" class="form-input" placeholder="Storgatan 12, 123 45 Stockholm" value="${escHtml(existing?.address || '')}">
             </div>
             <div class="form-row">
                 <div class="form-group">
                     <label for="cust-phone">Telefon</label>
-                    <input type="tel" id="cust-phone" class="form-input" placeholder="070-123 4567" value="${existing?.phone || ''}">
+                    <input type="tel" id="cust-phone" class="form-input" placeholder="070-123 4567" value="${escHtml(existing?.phone || '')}">
                 </div>
                 <div class="form-group">
                     <label for="cust-email">E-post</label>
-                    <input type="email" id="cust-email" class="form-input" placeholder="namn@exempel.se" value="${existing?.email || ''}">
+                    <input type="email" id="cust-email" class="form-input" placeholder="namn@exempel.se" value="${escHtml(existing?.email || '')}">
                 </div>
             </div>
             <div class="form-group">
                 <label for="cust-notes">Anteckningar</label>
-                <textarea id="cust-notes" class="form-input" placeholder="T.ex. portkod, husdjur, specialinstruktioner...">${existing?.notes || ''}</textarea>
+                <textarea id="cust-notes" class="form-input" placeholder="T.ex. portkod, husdjur, specialinstruktioner...">${escHtml(existing?.notes || '')}</textarea>
             </div>
             <div class="form-group">
                 <label for="cust-est-hours">Uppskattat antal timmar</label>

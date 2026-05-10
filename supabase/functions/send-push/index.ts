@@ -31,6 +31,31 @@ serve(async (req) => {
   }
 
   try {
+    // --- Authorization: verify caller is an admin ---
+    const authHeader = req.headers.get('authorization') || ''
+    const token = authHeader.replace(/^Bearer\s+/i, '')
+    if (!token) {
+      return jsonResponse({ ok: false, error: 'Missing authorization token' }, 401)
+    }
+
+    // Decode JWT payload (no verification needed — Supabase gateway already validated)
+    let callerEmail = null
+    try {
+      const payloadB64 = token.split('.')[1]
+      const payloadJson = atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/'))
+      const payload = JSON.parse(payloadJson)
+      callerEmail = payload.email?.toLowerCase()
+    } catch {
+      return jsonResponse({ ok: false, error: 'Invalid token' }, 401)
+    }
+
+    // Admin whitelist — only these emails can trigger push notifications
+    const ADMIN_EMAILS = ['ingeholberg@gmail.com', 'veronicasorianoholberg@gmail.com']
+    if (!callerEmail || !ADMIN_EMAILS.includes(callerEmail)) {
+      console.warn(`[send-push] Unauthorized caller: ${callerEmail}`)
+      return jsonResponse({ ok: false, error: 'Forbidden — admin only' }, 403)
+    }
+
     const { type, employee_email, title, body: msgBody } = await req.json()
 
     const VAPID_PRIVATE_KEY = Deno.env.get('VAPID_PRIVATE_KEY')!

@@ -2,10 +2,10 @@
  * Veckoplan — Settings (Notification Preferences)
  */
 
-import { getUser, dbGetSetting, dbSetSetting, dbDeleteSetting } from './supabase.js?v=64';
+import { getUser, dbGetSetting, dbSetSetting, dbDeleteSetting } from './supabase.js?v=71';
 import {
     dbGetSubscription, dbUpsertSubscription, dbUpdateSubscriptionPrefs
-} from './supabase.js?v=64';
+} from './supabase.js?v=71';
 
 const VAPID_PUBLIC_KEY = 'BJC_-JfmMRGUnnkfibR52IGARups1q-t-jOGLee8FoA8G_oHH-v9QNf3PrqGrmz_gVWCLAzwSZN8A1gd72q4E_c';
 
@@ -110,11 +110,25 @@ export async function renderSettings() {
             <h2 class="settings-title">🤖 Implementera chatbot</h2>
             <div class="settings-card">
                 <div class="setting-info" style="margin-bottom: 12px">
-                    <div class="setting-desc">Klistra in ditt chatbot-skript (t.ex. från Chatbase). Skriptet aktiveras direkt och laddas vid varje inloggning.</div>
+                    <div class="setting-desc">Välj din chatbot-leverantör och ange ditt widget-ID. Chatboten laddas automatiskt vid inloggning.</div>
                 </div>
-                <textarea id="chatbot-script" class="form-input" rows="6" style="font-family: monospace; font-size: 0.82rem; resize: vertical;" placeholder="Klistra in &lt;script&gt;...&lt;/script&gt; här"></textarea>
+                <div class="form-group">
+                    <label for="chatbot-provider">Leverantör</label>
+                    <select id="chatbot-provider" class="form-input">
+                        <option value="">— Välj leverantör —</option>
+                        <option value="clientrelay">ClientRelay</option>
+                        <option value="chatbase">Chatbase</option>
+                        <option value="crisp">Crisp</option>
+                        <option value="tawk">Tawk.to</option>
+                        <option value="tidio">Tidio</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="chatbot-widget-id">Widget-ID</label>
+                    <input type="text" id="chatbot-widget-id" class="form-input" placeholder="Ditt widget-ID från leverantören">
+                </div>
                 <div style="display:flex; gap:10px; margin-top:12px; align-items:center">
-                    <button id="btn-save-chatbot" class="btn-primary">Spara &amp; aktivera</button>
+                    <button id="btn-save-chatbot" class="btn-primary">Spara & aktivera</button>
                     <button id="btn-remove-chatbot" class="btn-ghost">Ta bort chatbot</button>
                     <span id="chatbot-status" style="font-size:0.85rem; color:var(--text-muted)"></span>
                 </div>
@@ -133,28 +147,47 @@ export async function renderSettings() {
     }
 
     // --- Chatbot handler ---
-    const chatbotTextarea = document.getElementById('chatbot-script');
+    const providerSelect = document.getElementById('chatbot-provider');
+    const widgetIdInput = document.getElementById('chatbot-widget-id');
     const chatbotStatus = document.getElementById('chatbot-status');
 
-    // Load existing script from DB
-    const dbScript = await dbGetSetting('chatbot_script');
-    if (chatbotTextarea && dbScript) chatbotTextarea.value = dbScript;
-    if (dbScript && chatbotStatus) chatbotStatus.textContent = '✅ Chatbot aktiv';
+    // Load existing config from DB
+    const dbChatbot = await dbGetSetting('chatbot_script');
+    if (dbChatbot) {
+        try {
+            const parsed = JSON.parse(dbChatbot);
+            if (parsed.provider && providerSelect) providerSelect.value = parsed.provider;
+            if (parsed.widgetId && widgetIdInput) widgetIdInput.value = parsed.widgetId;
+            if (chatbotStatus) chatbotStatus.textContent = '✅ Chatbot aktiv';
+        } catch {
+            // Legacy raw script — clear it, it's not safe
+            console.warn('CleanSchedule: legacy raw chatbot script found, clearing.');
+            await dbDeleteSetting('chatbot_script');
+            localStorage.removeItem('cs_chatbot_script');
+        }
+    }
 
     document.getElementById('btn-save-chatbot')?.addEventListener('click', async () => {
-        const raw = chatbotTextarea?.value?.trim() || '';
-        if (!raw) {
-            chatbotStatus.textContent = '⚠️ Klistra in ett skript först.';
+        const provider = providerSelect?.value || '';
+        const widgetId = widgetIdInput?.value?.trim() || '';
+        if (!provider) {
+            chatbotStatus.textContent = '⚠️ Välj en leverantör.';
             return;
         }
-        if (!raw.includes('<script') || !raw.includes('</script>')) {
-            chatbotStatus.textContent = '❌ Skriptet verkar inte vara giltigt.';
+        if (!widgetId) {
+            chatbotStatus.textContent = '⚠️ Ange widget-ID.';
             return;
         }
+        // Validate widget ID: alphanumeric, dashes, underscores only
+        if (!/^[a-zA-Z0-9_-]+$/.test(widgetId)) {
+            chatbotStatus.textContent = '❌ Widget-ID får bara innehålla bokstäver, siffror, bindestreck och understreck.';
+            return;
+        }
+        const config = JSON.stringify({ provider, widgetId });
         chatbotStatus.textContent = 'Sparar...';
-        await dbSetSetting('chatbot_script', raw);
-        localStorage.setItem('cs_chatbot_script', raw); // local cache
-        injectChatbotScript(raw);
+        await dbSetSetting('chatbot_script', config);
+        localStorage.setItem('cs_chatbot_script', config);
+        injectChatbotScript(config);
         chatbotStatus.textContent = '✅ Chatbot sparad och aktiverad!';
         setTimeout(() => { chatbotStatus.textContent = '✅ Chatbot aktiv'; }, 3000);
     });
@@ -162,9 +195,12 @@ export async function renderSettings() {
     document.getElementById('btn-remove-chatbot')?.addEventListener('click', async () => {
         await dbDeleteSetting('chatbot_script');
         localStorage.removeItem('cs_chatbot_script');
-        if (chatbotTextarea) chatbotTextarea.value = '';
-        chatbotStatus.textContent = 'Chatbot borttagen. Sidan laddas om...';
-        setTimeout(() => location.reload(), 1500);
+        if (providerSelect) providerSelect.value = '';
+        if (widgetIdInput) widgetIdInput.value = '';
+        // Remove any existing injected chatbot
+        document.querySelectorAll('script[data-chatbot-inject]').forEach(s => s.remove());
+        document.querySelectorAll('iframe[data-chatbot-inject]').forEach(s => s.remove());
+        chatbotStatus.textContent = '🗑️ Chatbot borttagen.';
     });
 
     // --- Push Notification Event handlers ---
@@ -264,42 +300,78 @@ function showSettingsStatus(msg, isError = false) {
 }
 
 /**
- * Extract inline script content and inject it into the page.
- * Only runs code from scripts the admin explicitly pasted.
- * Security: only allows scripts referencing known chatbot CDN domains.
+ * Inject chatbot widget by provider + widget ID.
+ * Security: NO user-supplied code executes. Script is generated from
+ * a hardcoded template per provider. Widget IDs are alphanumeric only.
  */
-export function injectChatbotScript(raw) {
-    if (!raw) return;
+export function injectChatbotScript(configStr) {
+    if (!configStr) return;
 
-    // Whitelist of allowed chatbot CDN domains
-    const ALLOWED_DOMAINS = [
-        'chatbase.co',
-        'crisp.chat',
-        'tawk.to',
-        'intercom.io',
-        'tidio.com',
-        'freshchat.com',
-        'zopim.com',
-        'zendesk.com',
-    ];
-
-    const hasTrustedDomain = ALLOWED_DOMAINS.some(domain => raw.includes(domain));
-    if (!hasTrustedDomain) {
-        console.warn('CleanSchedule: chatbot script rejected — domain not in allowlist.');
+    let config;
+    try {
+        config = JSON.parse(configStr);
+    } catch {
+        // Legacy raw script — refuse to execute
+        console.warn('CleanSchedule: raw chatbot script rejected. Use provider + widget ID.');
         return;
     }
 
-    // Extract content between <script> tags
-    const match = raw.match(/<script[^>]*>([\s\S]*?)<\/script>/i);
-    if (!match) return;
-    const code = match[1].trim();
-    if (!code) return;
+    const { provider, widgetId } = config;
+    if (!provider || !widgetId) return;
 
-    // Remove any existing injected chatbot script to avoid duplicates
+    // Strict validation: alphanumeric, dashes, underscores only
+    if (!/^[a-zA-Z0-9_-]+$/.test(widgetId)) {
+        console.warn('CleanSchedule: invalid widget ID rejected.');
+        return;
+    }
+
+    // Remove any existing chatbot injection
     document.querySelectorAll('script[data-chatbot-inject]').forEach(s => s.remove());
+    document.querySelectorAll('iframe[data-chatbot-inject]').forEach(s => s.remove());
 
-    const el = document.createElement('script');
-    el.setAttribute('data-chatbot-inject', '1');
-    el.textContent = code;
-    document.head.appendChild(el);
+    // Provider templates — each generates a script with a known CDN URL
+    const PROVIDERS = {
+        clientrelay: (id) => {
+            const iframe = document.createElement('iframe');
+            iframe.src = `https://clientrelay.tech/chatbot/${id}`;
+            iframe.setAttribute('data-chatbot-inject', '1');
+            iframe.style.cssText = 'position:fixed;bottom:20px;right:20px;width:400px;height:600px;border:none;z-index:9999;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.15);';
+            document.body.appendChild(iframe);
+        },
+        chatbase: (id) => {
+            const el = document.createElement('script');
+            el.src = `https://www.chatbase.co/embed.min.js`;
+            el.setAttribute('chatbotId', id);
+            el.setAttribute('data-chatbot-inject', '1');
+            el.defer = true;
+            document.head.appendChild(el);
+        },
+        crisp: (id) => {
+            const el = document.createElement('script');
+            el.setAttribute('data-chatbot-inject', '1');
+            el.textContent = `window.$crisp=[];window.CRISP_WEBSITE_ID="${id}";(function(){var d=document,s=d.createElement("script");s.src="https://client.crisp.chat/l.js";s.async=1;d.getElementsByTagName("head")[0].appendChild(s);})();`;
+            document.head.appendChild(el);
+        },
+        tawk: (id) => {
+            const el = document.createElement('script');
+            el.setAttribute('data-chatbot-inject', '1');
+            el.textContent = `var Tawk_API=Tawk_API||{},Tawk_LoadStart=new Date();(function(){var s=document.createElement("script");s.async=true;s.src="https://embed.tawk.to/${id}/default";s.charset="UTF-8";s.setAttribute("crossorigin","*");document.head.appendChild(s);})();`;
+            document.head.appendChild(el);
+        },
+        tidio: (id) => {
+            const el = document.createElement('script');
+            el.src = `https://code.tidio.co/${id}.js`;
+            el.setAttribute('data-chatbot-inject', '1');
+            el.async = true;
+            document.head.appendChild(el);
+        },
+    };
+
+    const injector = PROVIDERS[provider];
+    if (!injector) {
+        console.warn(`CleanSchedule: unknown chatbot provider "${provider}".`);
+        return;
+    }
+
+    injector(widgetId);
 }

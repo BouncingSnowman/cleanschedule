@@ -33,6 +33,11 @@ export function signOut() {
     localStorage.removeItem('cs_session');
 }
 
+/** Get the current session access token for authenticated API calls */
+export function getAccessToken() {
+    return _session?.access_token || null;
+}
+
 export function signInWithGoogle() {
     const redirectTo = window.location.origin + window.location.pathname;
     window.location.href = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}`;
@@ -50,8 +55,11 @@ export function handleOAuthCallback() {
     const token_type = params.get('token_type');
 
     if (access_token) {
-        // Decode user from JWT
-        const payload = JSON.parse(atob(access_token.split('.')[1]));
+        // Decode user from JWT (UTF-8 safe for Swedish chars ö, ä, å)
+        const base64 = access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+        const binary = atob(base64);
+        const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+        const payload = JSON.parse(new TextDecoder().decode(bytes));
 
         _session = {
             access_token,
@@ -62,6 +70,7 @@ export function handleOAuthCallback() {
             user: {
                 id: payload.sub,
                 email: payload.email,
+                avatar_url: payload.user_metadata?.picture || payload.user_metadata?.avatar_url || null,
             },
         };
         saveSession(_session);
@@ -97,9 +106,12 @@ export function isEmployee() {
     return _session?.role === 'employee';
 }
 
-/** Call after login to determine role via DB RPC */
+/** Call after login to determine role via DB RPC.
+ *  FAIL-CLOSED: if role check fails, session is killed unless user is an anti-lockout admin.
+ */
 export async function resolveUserRole() {
     if (!_session?.access_token) return null;
+    const email = _session?.user?.email?.toLowerCase();
     try {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/check_user_role`, {
             method: 'POST',
@@ -108,6 +120,16 @@ export async function resolveUserRole() {
         });
         if (!res.ok) {
             console.error('Role check failed:', res.status);
+            // Anti-lockout: admin emails always get admin role
+            if (email && ADMIN_EMAILS.some(ae => ae.toLowerCase() === email)) {
+                console.warn('Anti-lockout: granting admin to', email);
+                _session.role = 'admin';
+                saveSession(_session);
+                return 'admin';
+            }
+            // Fail closed — kill session
+            _session = null;
+            localStorage.removeItem('cs_session');
             return null;
         }
         const role = await res.json();
@@ -116,6 +138,16 @@ export async function resolveUserRole() {
         return role;
     } catch (e) {
         console.error('Role check error:', e);
+        // Anti-lockout: admin emails always get admin role
+        if (email && ADMIN_EMAILS.some(ae => ae.toLowerCase() === email)) {
+            console.warn('Anti-lockout: granting admin to', email);
+            _session.role = 'admin';
+            saveSession(_session);
+            return 'admin';
+        }
+        // Fail closed — kill session on error
+        _session = null;
+        localStorage.removeItem('cs_session');
         return null;
     }
 }
@@ -159,8 +191,18 @@ export async function refreshSession() {
         });
         const data = await res.json();
         if (data.access_token) {
-            _session = data;
-            saveSession(data);
+            // Preserve role and user info from old session
+            const oldRole = _session.role;
+            const oldUser = _session.user;
+            _session = {
+                ...data,
+                role: oldRole,
+                user: {
+                    id: data.user?.id || oldUser?.id,
+                    email: data.user?.email || oldUser?.email,
+                },
+            };
+            saveSession(_session);
             return true;
         }
     } catch (e) { /* ignore */ }
@@ -208,6 +250,8 @@ export async function dbSelect(table, query = '') {
 }
 
 export async function dbInsert(table, row) {
+    // Defense-in-depth: require valid role before writes
+    if (!_session?.role) throw new Error('Ingen giltig roll — åtkomst nekad');
     const uid = getUserId();
     return dbFetch(table, {
         method: 'POST',
@@ -216,6 +260,8 @@ export async function dbInsert(table, row) {
 }
 
 export async function dbUpdate(table, id, updates) {
+    // Defense-in-depth: require valid role before writes
+    if (!_session?.role) throw new Error('Ingen giltig roll — åtkomst nekad');
     return dbFetch(table, {
         method: 'PATCH',
         query: `id=eq.${id}`,

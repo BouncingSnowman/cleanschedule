@@ -2,16 +2,18 @@
  * CleanSchedule — Main Entry Point (with Auth)
  */
 
-import { restoreSession, isLoggedIn, signOut, handleOAuthCallback, getUser, resolveUserRole, isAdmin, isEmployee, getUserRole, dbGetSetting } from './supabase.js?v=64';
-import { initAuth, renderAuthView } from './auth.js?v=64';
-import { loadAllData, getUnscheduledJobs } from './store.js?v=64';
-import { initCalendar, renderCalendar, renderUnscheduledPanel } from './calendar.js?v=64';
-import { initEmployees, renderEmployees } from './employees.js?v=64';
-import { initCustomers, renderCustomers } from './customers.js?v=64';
-import { initDashboard, renderDashboard } from './dashboard.js?v=64';
-import { initSettings, renderSettings, injectChatbotScript } from './settings.js?v=64';
-import { initMySchedule, renderMySchedule } from './my-schedule.js?v=64';
-import { exportData, importData, importCustomersFromCsv } from './store.js?v=64';
+import { restoreSession, isLoggedIn, signOut, handleOAuthCallback, getUser, resolveUserRole, isAdmin, isEmployee, getUserRole, dbGetSetting } from './supabase.js?v=71';
+import { initAuth, renderAuthView, renderAccessDenied } from './auth.js?v=71';
+import { loadAllData, getUnscheduledJobs } from './store.js?v=71';
+import { initCalendar, renderCalendar, renderUnscheduledPanel } from './calendar.js?v=71';
+import { initEmployees, renderEmployees } from './employees.js?v=71';
+import { initCustomers, renderCustomers } from './customers.js?v=71';
+import { initDashboard, renderDashboard } from './dashboard.js?v=71';
+import { initSettings, renderSettings, injectChatbotScript } from './settings.js?v=71';
+import { initMySchedule, renderMySchedule } from './my-schedule.js?v=71';
+import { exportData, importData, importCustomersFromCsv } from './store.js?v=71';
+
+const APP_VERSION = '1.0.71';
 
 document.addEventListener('DOMContentLoaded', async () => {
     initAuth(onLoginSuccess);
@@ -39,8 +41,15 @@ async function onLoginSuccess() {
     const role = await resolveUserRole();
     if (!role) {
         if (loadingEl) loadingEl.classList.add('hidden');
-        signOut();
-        showAuthView('Ditt konto har inte behörighet. Kontakta din chef.');
+        // Show Access Denied screen — do NOT auto-sign-out
+        const user = getUser();
+        document.getElementById('view-auth').classList.remove('hidden');
+        document.getElementById('sidebar').classList.add('hidden');
+        document.getElementById('main-content').classList.add('hidden');
+        renderAccessDenied(user?.email, async () => {
+            // Retry: try resolving role again
+            await onLoginSuccess();
+        });
         return;
     }
 
@@ -89,10 +98,34 @@ async function onLoginSuccess() {
         if (cached) injectChatbotScript(cached);
     }
 
-    // Show user email in sidebar
+    // Show user info in sidebar (avatar + email + version)
     const user = getUser();
     const userName = document.querySelector('.user-name');
     if (userName && user?.email) userName.textContent = user.email;
+
+    // Google avatar
+    const avatarEl = document.querySelector('.user-avatar');
+    if (avatarEl && user?.avatar_url) {
+        const img = document.createElement('img');
+        img.src = user.avatar_url;
+        img.className = 'user-avatar-img';
+        img.alt = '';
+        img.referrerPolicy = 'no-referrer';
+        avatarEl.replaceChildren(img);
+    }
+
+    // Version display
+    const versionEl = document.getElementById('app-version');
+    if (versionEl) {
+        versionEl.textContent = `v${APP_VERSION}`;
+        versionEl.title = 'Klicka för att kopiera version';
+        versionEl.style.cursor = 'pointer';
+        versionEl.addEventListener('click', () => {
+            navigator.clipboard?.writeText(`CleanSchedule v${APP_VERSION}`);
+            versionEl.textContent = 'Kopierad!';
+            setTimeout(() => { versionEl.textContent = `v${APP_VERSION}`; }, 1500);
+        });
+    }
 
     // --- View Navigation ---
     const navBtns = document.querySelectorAll('.nav-btn');

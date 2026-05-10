@@ -8,10 +8,10 @@ import {
     EMPLOYEE_COLORS, isEmployeeOffOnDate,
     addJobException, deleteJobExceptionByDateAndType, isOccurrenceCancelled,
     stopRecurringFromDate, splitRecurringJob
-} from './store.js?v=64';
-import { openModal, closeModal } from './modals.js?v=64';
-import { downloadWeekIcs } from './ics.js?v=64';
-import { getUser } from './supabase.js?v=64';
+} from './store.js?v=71';
+import { openModal, closeModal } from './modals.js?v=71';
+import { downloadWeekIcs } from './ics.js?v=71';
+import { getUser } from './supabase.js?v=71';
 
 /** Parse a numeric hours value that may use comma as decimal separator */
 function parseHours(val) {
@@ -422,7 +422,7 @@ function showJobForm(existing = null, prefillEmployee = '', prefillDate = '', is
             </div>
             <div class="form-group">
                 <label for="job-notes">Anteckningar</label>
-                <textarea id="job-notes" class="form-input" placeholder="Särskilda instruktioner...">${existing?.notes || ''}</textarea>
+                <textarea id="job-notes" class="form-input" placeholder="Särskilda instruktioner...">${escHtml(existing?.notes || '')}</textarea>
             </div>
         `,
         footer: `
