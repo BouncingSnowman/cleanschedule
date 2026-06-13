@@ -1,10 +1,10 @@
 /**
  * CleanSchedule — Supabase Client
- * Uses the same project as Alien Sector (cywcnyimlhiwbbqqzvoe)
+ * Uses the dedicated CleanSchedule Supabase project.
  */
 
-const SUPABASE_URL = 'https://cywcnyimlhiwbbqqzvoe.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5d2NueWltbGhpd2JicXF6dm9lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1NjIyOTYsImV4cCI6MjA4MTEzODI5Nn0.rVPlSGwbKz-HyODCz3f2tFW-9sm1X3zRVuWoDuwsM24';
+const SUPABASE_URL = 'https://caywwkqjwyxbkmfapjrp.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNheXd3a3Fqd3l4YmttZmFwanJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNzc5NTUsImV4cCI6MjA5Njk1Mzk1NX0.fmvbeROpGDfuafOp2VA_3I5HFKDQ029_i2Z0-ULuxhk';
 
 let _session = null;
 

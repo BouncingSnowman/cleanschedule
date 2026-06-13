@@ -19,6 +19,7 @@ CREATE TABLE employees (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users NOT NULL,
   name TEXT NOT NULL,
+  email TEXT,
   phone TEXT,
   type TEXT DEFAULT 'fulltime',
   color TEXT,

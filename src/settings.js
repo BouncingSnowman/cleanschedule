@@ -7,7 +7,7 @@ import {
     dbGetSubscription, dbUpsertSubscription, dbUpdateSubscriptionPrefs
 } from './supabase.js?v=74';
 
-const VAPID_PUBLIC_KEY = 'BJC_-JfmMRGUnnkfibR52IGARups1q-t-jOGLee8FoA8G_oHH-v9QNf3PrqGrmz_gVWCLAzwSZN8A1gd72q4E_c';
+const VAPID_PUBLIC_KEY = 'BCXAqqinjBdUeX1wgmfCDdM_T6p_ARQDu4XWd8M-Tmk87N-fxo5Ko7PgBs9U24ghn18adqWdGJ0dYiEkSIP4PYI';
 
 export function initSettings() {}
 

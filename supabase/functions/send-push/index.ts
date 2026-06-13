@@ -16,7 +16,15 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
 const VAPID_SUBJECT = 'mailto:ingeholberg@gmail.com'
-const VAPID_PUBLIC_KEY = 'BJC_-JfmMRGUnnkfibR52IGARups1q-t-jOGLee8FoA8G_oHH-v9QNf3PrqGrmz_gVWCLAzwSZN8A1gd72q4E_c'
+const VAPID_PUBLIC_KEY = 'BCXAqqinjBdUeX1wgmfCDdM_T6p_ARQDu4XWd8M-Tmk87N-fxo5Ko7PgBs9U24ghn18adqWdGJ0dYiEkSIP4PYI'
+
+type WebPushSubscription = {
+  endpoint: string
+  keys: {
+    p256dh: string
+    auth: string
+  }
+}
 
 serve(async (req) => {
   // CORS
@@ -96,7 +104,7 @@ serve(async (req) => {
 
     // Send push to each subscription
     let sent = 0
-    const errors = []
+    const errors: string[] = []
     for (const sub of subscriptions) {
       try {
         await sendWebPush(
@@ -110,8 +118,9 @@ serve(async (req) => {
         sent++
         console.log(`[send-push] Sent to ${sub.endpoint.slice(0, 50)}...`)
       } catch (e) {
-        console.error(`[send-push] Push send error:`, e.message)
-        errors.push(e.message)
+        const message = e instanceof Error ? e.message : String(e)
+        console.error(`[send-push] Push send error:`, message)
+        errors.push(message)
       }
     }
 
@@ -122,7 +131,7 @@ serve(async (req) => {
   }
 })
 
-function jsonResponse(data, status = 200) {
+function jsonResponse(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
@@ -134,7 +143,7 @@ function jsonResponse(data, status = 200) {
 
 // --- Web Push Implementation (RFC 8291 / RFC 8188) ---
 
-async function sendWebPush(subscription, payload, vapidPrivateKeyB64) {
+async function sendWebPush(subscription: WebPushSubscription, payload: string, vapidPrivateKeyB64: string) {
   // Generate VAPID JWT
   const vapidHeaders = await generateVapidHeaders(
     subscription.endpoint,
@@ -167,7 +176,7 @@ async function sendWebPush(subscription, payload, vapidPrivateKeyB64) {
   }
 }
 
-async function generateVapidHeaders(endpoint, privateKeyB64) {
+async function generateVapidHeaders(endpoint: string, privateKeyB64: string) {
   const audience = new URL(endpoint).origin
   const now = Math.floor(Date.now() / 1000)
 
@@ -217,7 +226,7 @@ async function generateVapidHeaders(endpoint, privateKeyB64) {
   }
 }
 
-async function encryptPayload(payload, clientPubB64, clientAuthB64) {
+async function encryptPayload(payload: string, clientPubB64: string, clientAuthB64: string) {
   const clientPubKey = b64urlDecode(clientPubB64)
   const clientAuth = b64urlDecode(clientAuthB64)
 
@@ -306,13 +315,13 @@ async function encryptPayload(payload, clientPubB64, clientAuthB64) {
 
 // --- Crypto Helpers ---
 
-function b64urlEncode(bytes) {
+function b64urlEncode(bytes: Uint8Array) {
   let binary = ''
   for (const b of bytes) binary += String.fromCharCode(b)
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }
 
-function b64urlDecode(str) {
+function b64urlDecode(str: string) {
   const base64 = str.replace(/-/g, '+').replace(/_/g, '/') + '=='.slice(0, (4 - str.length % 4) % 4)
   const binary = atob(base64)
   const bytes = new Uint8Array(binary.length)
@@ -320,7 +329,7 @@ function b64urlDecode(str) {
   return bytes
 }
 
-function concatBytes(...arrays) {
+function concatBytes(...arrays: Uint8Array[]) {
   const total = arrays.reduce((s, a) => s + a.length, 0)
   const result = new Uint8Array(total)
   let offset = 0
@@ -328,19 +337,25 @@ function concatBytes(...arrays) {
   return result
 }
 
-async function hkdfExtract(salt, ikm) {
+async function hkdfExtract(salt: Uint8Array, ikm: Uint8Array) {
   const key = await crypto.subtle.importKey(
-    'raw', salt, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+    'raw', toArrayBuffer(salt), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
   )
-  return new Uint8Array(await crypto.subtle.sign('HMAC', key, ikm))
+  return new Uint8Array(await crypto.subtle.sign('HMAC', key, toArrayBuffer(ikm)))
 }
 
-async function hkdfExpand(prk, info, length) {
+async function hkdfExpand(prk: Uint8Array, info: Uint8Array, length: number) {
   const key = await crypto.subtle.importKey(
-    'raw', prk, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+    'raw', toArrayBuffer(prk), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
   )
   const infoWithCounter = concatBytes(info, new Uint8Array([1]))
   const okm = new Uint8Array(await crypto.subtle.sign('HMAC', key, infoWithCounter))
   return okm.slice(0, length)
+}
+
+function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(bytes.byteLength)
+  copy.set(bytes)
+  return copy.buffer
 }
 

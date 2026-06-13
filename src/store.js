@@ -6,7 +6,7 @@
 
 import { dbSelect, dbInsert, dbUpdate, dbDelete, isLoggedIn, getAccessToken } from './supabase.js?v=74';
 
-const SUPABASE_URL = 'https://cywcnyimlhiwbbqqzvoe.supabase.co';
+const SUPABASE_URL = 'https://caywwkqjwyxbkmfapjrp.supabase.co';
 
 /** Fire-and-forget push notification via Edge Function */
 async function sendPush(type, employeeEmail, title, body) {

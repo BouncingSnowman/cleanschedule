@@ -95,7 +95,7 @@ DROP POLICY IF EXISTS "Employee read job exceptions" ON job_exceptions;
 
 ALTER TABLE job_exceptions ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Whitelist access" ON job_exceptions FOR ALL
+CREATE POLICY "Whitelist access" ON job_exceptions FOR ALL TO authenticated
   USING (auth.jwt()->> 'email' IN ('ingeholberg@gmail.com','veronicasorianoholberg@gmail.com'))
   WITH CHECK (auth.jwt()->> 'email' IN ('ingeholberg@gmail.com','veronicasorianoholberg@gmail.com'));
 
@@ -114,6 +114,28 @@ CREATE POLICY "Employee read job exceptions" ON job_exceptions
 -- =============================================================
 DROP POLICY IF EXISTS "Whitelist access" ON push_subscriptions;
 
-CREATE POLICY "Whitelist access" ON push_subscriptions FOR ALL
+CREATE POLICY "Whitelist access" ON push_subscriptions FOR ALL TO authenticated
   USING (auth.jwt()->> 'email' IN ('ingeholberg@gmail.com','veronicasorianoholberg@gmail.com'))
   WITH CHECK (auth.jwt()->> 'email' IN ('ingeholberg@gmail.com','veronicasorianoholberg@gmail.com'));
+
+-- =============================================================
+-- 6. Data API hardening: no anonymous table access
+-- =============================================================
+REVOKE ALL ON SCHEMA public FROM anon;
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon;
+REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM anon;
+REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA public FROM anon;
+REVOKE ALL ON SCHEMA public FROM PUBLIC;
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM PUBLIC;
+REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM PUBLIC;
+REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA public FROM PUBLIC;
+
+GRANT USAGE ON SCHEMA public TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authenticated;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM anon;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON SEQUENCES FROM anon;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM anon;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM PUBLIC;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON SEQUENCES FROM PUBLIC;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
